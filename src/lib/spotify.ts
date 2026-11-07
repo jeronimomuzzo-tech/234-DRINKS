@@ -67,17 +67,7 @@ export const loginWithSpotify = async (redirectTarget?: string) => {
     authUrl.search = new URLSearchParams(params).toString();
 
     // Check if mobile device or standalone PWA
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-        window.matchMedia('(display-mode: standalone)').matches ||
-        window.innerWidth < 768;
-
-    if (isMobile) {
-        // Direct redirect on mobile to avoid popup blockers and broken tab messaging
-        window.location.href = authUrl.toString();
-        return;
-    }
-
-    // On Desktop: Open Popup
+    // Open Popup
     const width = 450;
     const height = 730;
     const left = (window.innerWidth / 2) - (width / 2);
@@ -90,7 +80,7 @@ export const loginWithSpotify = async (redirectTarget?: string) => {
     );
 
     if (!popup) {
-        // Fallback to direct redirect if popup blocked
+        // Only redirect if browser completely blocked the popup
         window.location.href = authUrl.toString();
     }
 }

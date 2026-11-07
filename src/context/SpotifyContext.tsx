@@ -59,6 +59,15 @@ export const SpotifyProvider = ({ children }: { children: React.ReactNode }) => 
         return null;
     }, []);
 
+    // Silent restore on mount if refresh token is present
+    useEffect(() => {
+        const storedToken = localStorage.getItem('spotify_access_token');
+        const storedRefreshToken = localStorage.getItem('spotify_refresh_token');
+        if (!storedToken && storedRefreshToken) {
+            refreshTokenNow();
+        }
+    }, [refreshTokenNow]);
+
     // Handle Token Refresh / Initial Load / Auth Callbacks
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
