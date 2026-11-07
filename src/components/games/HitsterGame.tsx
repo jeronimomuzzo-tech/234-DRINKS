@@ -33,7 +33,12 @@ import {
     Swords,
     Skull,
     Sparkles,
-    Check
+    Check,
+    Disc,
+    ArrowDown,
+    ArrowUp,
+    Plus,
+    Radio
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -51,6 +56,29 @@ interface StealBet {
     targetTeam: Team;
     stolen: boolean | null;
 }
+
+const getDecadeBadge = (yearStr?: string) => {
+    if (!yearStr) return { label: '🎵 Hits', bg: 'bg-zinc-800/80 text-zinc-300 border-zinc-700/50', border: 'border-l-zinc-500', dot: 'bg-zinc-400' };
+    const year = parseInt(yearStr);
+    if (isNaN(year)) return { label: '🎵 Hits', bg: 'bg-zinc-800/80 text-zinc-300 border-zinc-700/50', border: 'border-l-zinc-500', dot: 'bg-zinc-400' };
+    if (year < 1970) return { label: '60s Clásicos', bg: 'bg-amber-950/60 text-amber-300 border-amber-600/40', border: 'border-l-amber-500', dot: 'bg-amber-400' };
+    if (year < 1980) return { label: '70s Disco/Rock', bg: 'bg-orange-950/60 text-orange-300 border-orange-500/40', border: 'border-l-orange-500', dot: 'bg-orange-400' };
+    if (year < 1990) return { label: '80s Synth/Pop', bg: 'bg-fuchsia-950/60 text-fuchsia-300 border-fuchsia-500/40', border: 'border-l-fuchsia-500', dot: 'bg-fuchsia-400' };
+    if (year < 2000) return { label: '90s Grunge/Hits', bg: 'bg-purple-950/60 text-purple-300 border-purple-500/40', border: 'border-l-purple-500', dot: 'bg-purple-400' };
+    if (year < 2010) return { label: '2000s Pop/Perreo', bg: 'bg-blue-950/60 text-blue-300 border-blue-500/40', border: 'border-l-blue-500', dot: 'bg-blue-400' };
+    if (year < 2020) return { label: '2010s Trap/EDM', bg: 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40', border: 'border-l-emerald-500', dot: 'bg-emerald-400' };
+    return { label: '2020s Éxitos Hoy', bg: 'bg-cyan-950/60 text-cyan-300 border-cyan-500/40', border: 'border-l-cyan-500', dot: 'bg-cyan-400' };
+};
+
+const getTeamColor = (t: Team) => {
+    switch (t) {
+        case 'A': return { badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', ring: 'ring-emerald-500/50', glow: 'from-emerald-500/20', dot: 'bg-emerald-400' };
+        case 'B': return { badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30', ring: 'ring-purple-500/50', glow: 'from-purple-500/20', dot: 'bg-purple-400' };
+        case 'C': return { badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', ring: 'ring-amber-500/50', glow: 'from-amber-500/20', dot: 'bg-amber-400' };
+        case 'D': return { badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30', ring: 'ring-cyan-500/50', glow: 'from-cyan-500/20', dot: 'bg-cyan-400' };
+        default: return { badge: 'bg-zinc-800 text-zinc-300 border-zinc-700', ring: 'ring-zinc-600', glow: 'from-zinc-800/20', dot: 'bg-zinc-400' };
+    }
+};
 
 export function HitsterGame({ onExit }: { onExit: () => void }) {
     const { token, player, deviceId, login, refreshTokenNow } = useSpotify();
@@ -975,7 +1003,10 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                         {/* Release Year Showcase */}
                         <div className="mt-5 pt-4 border-t border-white/10 w-full flex flex-col items-center">
                             <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Año de Lanzamiento</div>
-                            <p className="text-5xl font-black text-white mb-3 tracking-tight">{releaseYear}</p>
+                            <p className="text-5xl font-black text-white mb-2 tracking-tight">{releaseYear}</p>
+                            <div className={`mb-4 px-3 py-1 rounded-full text-xs font-bold border ${getDecadeBadge(String(releaseYear)).bg}`}>
+                                {getDecadeBadge(String(releaseYear)).label}
+                            </div>
 
                             {!showTrackDetails ? (
                                 <button
@@ -986,21 +1017,22 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                                 </button>
                             ) : (
                                 <div className="flex flex-col items-center animate-in zoom-in slide-in-from-bottom-2 duration-300 w-full">
-                                    <div className="relative w-32 h-32 mb-2 shadow-xl rounded-2xl overflow-hidden bg-black/50 border border-white/10 flex-shrink-0">
+                                    <div className="relative w-36 h-36 mb-2.5 shadow-2xl rounded-2xl overflow-hidden bg-black/60 border border-white/15 flex-shrink-0 group">
                                         <img
                                             src={currentTrack?.album?.images[0]?.url}
                                             className="w-full h-full object-cover"
                                             alt="Album Art"
                                         />
+                                        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-white leading-tight px-4 truncate max-w-xs">{currentTrack?.name}</h3>
-                                    <p className="text-gray-400 text-xs mb-3">{currentTrack?.artists?.[0]?.name}</p>
+                                    <h3 className="text-lg font-black text-white leading-tight px-4 truncate max-w-xs">{currentTrack?.name}</h3>
+                                    <p className="text-emerald-400 text-xs font-bold mb-3">{currentTrack?.artists?.[0]?.name}</p>
                                 </div>
                             )}
                         </div>
 
                         {/* B.3: MECÁNICA DE ROBO DE CANCIÓN ("STEAL BET") */}
-                        <div className="mt-4 w-full bg-gradient-to-r from-purple-950/40 to-indigo-950/40 p-3 rounded-2xl border border-purple-500/20 text-left">
+                        <div className="mt-4 w-full bg-gradient-to-r from-purple-950/40 to-indigo-950/40 p-3.5 rounded-2xl border border-purple-500/20 text-left">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-black text-purple-300 flex items-center gap-1.5 uppercase">
                                     <Swords size={14} className="text-purple-400" /> Duelo: ¡Robar Canción!
@@ -1081,34 +1113,48 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         );
     };
 
-    // 7. Preview Zoom Modal
+    // 7. Preview Zoom Modal with Decade Badging & Vinyl Polish
     const renderPreviewOverlay = () => {
         if (!previewTrack) return null;
+        const year = previewTrack.album?.release_date?.split('-')[0];
+        const decade = getDecadeBadge(year);
+
         return (
             <div
                 className="absolute inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in"
                 onClick={() => setPreviewTrack(null)}
             >
                 <div
-                    className="w-full max-w-sm bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-white/10 flex flex-col items-center text-center animate-in zoom-in-95"
+                    className="w-full max-w-sm bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-3xl p-6 shadow-2xl border border-white/15 flex flex-col items-center text-center animate-in zoom-in-95 relative overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-2xl mb-4 ring-2 ring-white/10">
+                    {/* Background glow */}
+                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-emerald-500/20 blur-3xl rounded-full pointer-events-none" />
+
+                    <div className="relative w-56 h-56 rounded-2xl overflow-hidden shadow-2xl mb-4 ring-2 ring-white/10 group">
                         <img
                             src={previewTrack.album?.images[0]?.url}
                             className="w-full h-full object-cover"
                             alt="Album Art"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <h2 className="text-xl font-black text-white leading-tight mb-1">{previewTrack.name}</h2>
-                    <p className="text-sm text-green-400 font-bold mb-4">{previewTrack.artists?.[0]?.name}</p>
-                    <div className="bg-white/5 px-6 py-2 rounded-full border border-white/10 mb-6">
-                        <span className="text-xs text-gray-400 uppercase font-bold mr-2">Año:</span>
-                        <span className="text-2xl font-black text-white">{previewTrack.album?.release_date?.split('-')[0]}</span>
+                    <p className="text-sm text-emerald-400 font-bold mb-4">{previewTrack.artists?.[0]?.name}</p>
+
+                    <div className="flex items-center gap-2 mb-6">
+                        <div className="bg-white/5 px-5 py-2 rounded-2xl border border-white/10">
+                            <span className="text-xs text-gray-400 uppercase font-bold mr-2">Año:</span>
+                            <span className="text-2xl font-black text-white">{year}</span>
+                        </div>
+                        <div className={`px-3 py-2 rounded-2xl text-xs font-bold border ${decade.bg}`}>
+                            {decade.label}
+                        </div>
                     </div>
+
                     <button
                         onClick={() => setPreviewTrack(null)}
-                        className="px-6 py-2.5 bg-white text-black font-bold rounded-full text-sm hover:scale-105 transition-transform"
+                        className="w-full py-3 bg-white text-black font-black rounded-2xl text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
                     >
                         Cerrar
                     </button>
@@ -1237,109 +1283,268 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                     </div>
                 ) : (
                     /* GAME BOARD (TIMELINE) */
-                    <div className={`h-full flex flex-col pt-2 pb-8 px-4 overflow-y-auto no-scrollbar ${shake ? 'animate-shake' : ''}`}>
-                        {/* Status Bar */}
-                        <div className="flex items-center justify-between mb-3 px-1">
-                            <div className={`py-1.5 px-3 rounded-xl font-bold uppercase tracking-wider text-xs ${currentTeam === 'A' ? 'bg-green-500/20 text-green-400' : 'bg-purple-500/20 text-purple-400'
-                                }`}>
-                                Jugando: Equipo {currentTeam}
+                    <div className={`h-full flex flex-col pt-2 pb-12 px-3 sm:px-4 overflow-y-auto no-scrollbar ${shake ? 'animate-shake' : ''}`}>
+                        {/* 1. Scoreboard / Status Bar */}
+                        <div className="flex items-center justify-between mb-3 px-1 max-w-md mx-auto w-full">
+                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                                {Object.entries(teams).map(([tId, tState]) => {
+                                    const tColor = getTeamColor(tId as Team);
+                                    const isActive = currentTeam === tId;
+                                    return (
+                                        <div
+                                            key={tId}
+                                            className={`px-2.5 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all ${
+                                                isActive
+                                                    ? `${tColor.badge} border shadow-lg scale-105 ring-1 ${tColor.ring}`
+                                                    : 'bg-white/5 text-gray-400 border border-white/5 opacity-60'
+                                            }`}
+                                        >
+                                            <span className={`w-2 h-2 rounded-full ${isActive ? tColor.dot + ' animate-pulse' : 'bg-gray-600'}`} />
+                                            <span>Eq. {tId}</span>
+                                            <span className="font-extrabold text-white bg-black/40 px-1.5 py-0.5 rounded-md text-[10px]">
+                                                {tState.score}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="text-[11px] text-gray-400 bg-white/5 px-2.5 py-1 rounded-lg">
-                                Modo: <span className="font-bold text-white capitalize">{difficulty}</span>
+                            <div className="text-[10px] text-gray-400 bg-white/5 border border-white/10 px-2 py-1 rounded-lg flex-shrink-0">
+                                Modo <span className="font-bold text-white capitalize">{difficulty}</span>
                             </div>
                         </div>
 
                         {/* Audio fallback warning if error */}
                         {playbackError && (
-                            <div className="mb-3 p-3 bg-amber-950/60 border border-amber-500/50 rounded-xl text-amber-200 text-xs flex items-center justify-between">
-                                <span className="truncate pr-2">{playbackError}</span>
+                            <div className="mb-3 max-w-md mx-auto w-full p-3 bg-amber-950/60 border border-amber-500/50 rounded-2xl text-amber-200 text-xs flex items-center justify-between shadow-lg">
+                                <span className="truncate pr-2 font-medium">{playbackError}</span>
                                 <button
                                     onClick={openSpotifyApp}
-                                    className="flex-shrink-0 px-2 py-1 bg-amber-500 text-black font-bold rounded-lg text-[10px]"
+                                    className="flex-shrink-0 px-2.5 py-1 bg-amber-500 text-black font-black rounded-xl text-[10px] hover:scale-105 active:scale-95 transition-transform"
                                 >
                                     Abrir Spotify
                                 </button>
                             </div>
                         )}
 
-                        {/* Now Playing Card (Sticky Top) */}
-                        <div className="sticky top-0 z-20 flex flex-col items-center mb-4 pb-4 bg-gradient-to-b from-black via-black/95 to-transparent w-full">
-                            <div className={`relative w-36 h-36 rounded-2xl overflow-hidden shadow-2xl ring-4 ${currentTeam === 'A' ? 'ring-green-500/40' : 'ring-purple-500/40'
-                                } ${gameState === 'playing' ? 'animate-pulse' : ''}`}>
-                                <div className="absolute inset-0 bg-zinc-900 flex flex-col items-center justify-center">
-                                    <HelpCircle size={44} className="text-white drop-shadow-lg animate-bounce" />
-                                    <span className="text-xs font-bold text-gray-300 mt-2 uppercase tracking-wider">Adivina el Año</span>
-                                </div>
-                            </div>
-                            <p className="text-gray-400 text-xs mt-2 font-medium">
-                                Escuchando pista... ¿En qué posición de tu línea de tiempo va?
-                            </p>
+                        {/* 2. Hero Vinyl Turntable (Sticky Top) */}
+                        <div className="sticky top-0 z-20 flex flex-col items-center mb-5 pb-3 bg-gradient-to-b from-black via-black/95 to-transparent w-full">
+                            <div className="relative w-full max-w-md p-4 rounded-3xl bg-gradient-to-b from-zinc-900/90 via-zinc-950/90 to-black/90 border border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.85)] backdrop-blur-xl flex flex-col items-center overflow-hidden">
+                                {/* Ambient Background Glow */}
+                                <div className={`absolute -top-12 -right-12 w-36 h-36 rounded-full blur-3xl opacity-30 ${getTeamColor(currentTeam).glow} bg-gradient-to-br`} />
 
-                            <div className="flex items-center gap-2 mt-2.5">
-                                <button
-                                    onClick={replayCurrentTrack}
-                                    disabled={isResuming}
-                                    className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 font-bold text-xs rounded-xl border border-green-500/30 flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
-                                    title="Volver a enviar señal de reproducción a Spotify"
-                                >
-                                    <Volume2 size={13} className={isResuming ? 'animate-spin' : ''} />
-                                    <span>{isResuming ? 'Reconectando...' : '¿No suena? Forzar Play ▶️'}</span>
-                                </button>
-                                <button
-                                    onClick={openSpotifyApp}
-                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-xs rounded-xl border border-white/10 flex items-center gap-1 transition-all"
-                                >
-                                    Abrir App
-                                </button>
-                            </div>
-                        </div>
+                                <div className="flex items-center gap-4 w-full">
+                                    {/* Realistic Rotating Vinyl Record */}
+                                    <div className="relative flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28">
+                                        {/* Vinyl Outer Edge & Grooves */}
+                                        <div className={`w-full h-full rounded-full bg-gradient-to-tr from-zinc-950 via-zinc-900 to-zinc-950 border-4 border-zinc-800 shadow-2xl flex items-center justify-center relative overflow-hidden ${
+                                            gameState === 'playing' ? 'animate-spin-slow' : ''
+                                        }`}>
+                                            {/* Micro Vinyl Grooves */}
+                                            <div className="absolute inset-1.5 rounded-full border border-zinc-700/40" />
+                                            <div className="absolute inset-3 rounded-full border border-zinc-800" />
+                                            <div className="absolute inset-4 rounded-full border border-zinc-700/30" />
+                                            <div className="absolute inset-6 rounded-full border border-zinc-800/80" />
 
-                        {/* Interactive Timeline Slots */}
-                        <div className="flex-1 flex flex-col items-center space-y-3 pb-24 max-w-md mx-auto w-full">
-                            {/* Slot 0 (Earliest) */}
-                            {gameState === 'playing' && (
-                                <button
-                                    onClick={() => handleGuess(0)}
-                                    className="w-full py-3.5 rounded-2xl border-2 border-dashed border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:border-green-400 hover:text-green-400 transition-all font-bold text-xs active:scale-[0.98]"
-                                >
-                                    👆 Más antigua que {teams[currentTeam].timeline[0]?.name || 'todo'}
-                                </button>
-                            )}
+                                            {/* Gloss Light Reflection */}
+                                            <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
 
-                            {teams[currentTeam].timeline.map((track, i) => (
-                                <div key={track.id + i} className="w-full flex flex-col space-y-3">
-                                    {/* Timeline Card */}
-                                    <div
-                                        className="bg-zinc-900/80 p-3.5 rounded-2xl flex items-center gap-3.5 border border-white/10 hover:border-white/20 active:scale-[0.98] transition-all cursor-pointer group shadow-lg"
-                                        onClick={() => setPreviewTrack(track)}
-                                    >
-                                        <div className="flex-shrink-0 w-14 h-14 bg-zinc-800 rounded-xl flex flex-col items-center justify-center border border-white/10 group-hover:border-green-500/50">
-                                            <Calendar size={14} className="text-gray-400 mb-0.5 group-hover:text-green-400" />
-                                            <span className="font-black text-base text-white">{track.album?.release_date?.split('-')[0]}</span>
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="font-bold truncate text-sm text-white">{track.name}</p>
-                                            <p className="text-gray-400 text-xs truncate">{track.artists?.[0]?.name}</p>
-                                        </div>
-                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Search size={16} className="text-green-400" />
+                                            {/* Center Vinyl Label */}
+                                            <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 flex flex-col items-center justify-center shadow-inner border-2 border-zinc-950">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-zinc-950 shadow-inner mb-0.5" />
+                                                <span className="text-[9px] font-black text-white leading-none">?</span>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Slot After Card */}
-                                    {gameState === 'playing' && (
-                                        <button
-                                            onClick={() => handleGuess(i + 1)}
-                                            className="w-full py-3.5 rounded-2xl border-2 border-dashed border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:border-green-400 hover:text-green-400 transition-all font-bold text-xs active:scale-[0.98]"
-                                        >
-                                            👇 {i === teams[currentTeam].timeline.length - 1
-                                                ? 'Más reciente que todo'
-                                                : `Entre ${track.album?.release_date?.split('-')[0]} y ${teams[currentTeam].timeline[i + 1]?.album?.release_date?.split('-')[0]}`
-                                            }
-                                        </button>
-                                    )}
+                                    {/* Turntable Info & Live Equalizer */}
+                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                EN VIVO
+                                            </span>
+                                            {/* Audio Wave Visualizer Bars */}
+                                            <div className="flex items-end gap-0.5 h-4 px-1">
+                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-1" />
+                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-2" />
+                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-3" />
+                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-4" />
+                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-5" />
+                                            </div>
+                                        </div>
+
+                                        <h3 className="text-sm sm:text-base font-black text-white leading-snug">
+                                            ¿En qué año se lanzó?
+                                        </h3>
+                                        <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">
+                                            Escucha atentamente e inserta en la posición correcta de tu cronología.
+                                        </p>
+                                    </div>
                                 </div>
-                            ))}
+
+                                {/* Audio Control Buttons */}
+                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5 w-full justify-between">
+                                    <button
+                                        onClick={replayCurrentTrack}
+                                        disabled={isResuming}
+                                        className="flex-1 py-1.5 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 font-bold text-xs rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                                        title="Volver a reproducir"
+                                    >
+                                        <Volume2 size={13} className={isResuming ? 'animate-spin' : ''} />
+                                        <span>{isResuming ? 'Conectando...' : '¿No suena? Forzar Play ▶️'}</span>
+                                    </button>
+                                    <button
+                                        onClick={openSpotifyApp}
+                                        className="py-1.5 px-3 bg-white/5 hover:bg-white/10 active:scale-95 text-gray-300 font-bold text-xs rounded-xl border border-white/10 flex items-center justify-center gap-1 transition-all"
+                                    >
+                                        Abrir Spotify
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. The Interactive Chronological Rail */}
+                        <div className="flex-1 max-w-md mx-auto w-full relative pb-28">
+                            {/* Visual Rail Line (Vertical Axis) */}
+                            <div className="absolute left-6 top-6 bottom-6 w-1 bg-gradient-to-b from-amber-500/40 via-purple-500/40 to-cyan-500/40 rounded-full shadow-[0_0_12px_rgba(168,85,247,0.3)] pointer-events-none" />
+
+                            {/* Header: Pasado / Más Antiguo */}
+                            <div className="flex items-center gap-2 mb-3 pl-3 text-amber-400/80 text-[10px] font-black uppercase tracking-widest">
+                                <span className="w-7 h-7 rounded-full bg-amber-950/60 border border-amber-500/40 flex items-center justify-center text-amber-300 shadow-sm">
+                                    <ArrowUp size={13} />
+                                </span>
+                                <span>Cronología: Más Antiguas (Pasado)</span>
+                            </div>
+
+                            {/* Slot 0 (Earliest Position) */}
+                            {gameState === 'playing' && (
+                                <div className="relative pl-12 mb-3">
+                                    {/* Rail Node Indicator */}
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-zinc-950 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] z-10">
+                                        <Plus size={11} className="stroke-[3]" />
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleGuess(0)}
+                                        className="w-full text-left p-3 rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-950/20 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all font-bold text-xs active:scale-[0.98] group shadow-sm hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-black">
+                                                ⏪ Ranura Inicial (Más Antigua)
+                                            </span>
+                                            <span className="text-emerald-400 font-black opacity-0 group-hover:opacity-100 transition-opacity">
+                                                Tocar para colocar ➜
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-300 text-xs mt-0.5 truncate font-semibold">
+                                            Antes de {teams[currentTeam].timeline[0]?.album?.release_date?.split('-')[0] || '1900'} · "{teams[currentTeam].timeline[0]?.name || 'Primera canción'}"
+                                        </p>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Chronological Track Cards & Insertion Slots */}
+                            {teams[currentTeam].timeline.map((track, i) => {
+                                const releaseYear = track.album?.release_date?.split('-')[0] || '????';
+                                const decade = getDecadeBadge(releaseYear);
+                                const isLast = i === teams[currentTeam].timeline.length - 1;
+                                const nextTrack = teams[currentTeam].timeline[i + 1];
+                                const nextYear = nextTrack?.album?.release_date?.split('-')[0];
+
+                                return (
+                                    <div key={track.id + i} className="relative flex flex-col">
+                                        {/* Timeline Song Card */}
+                                        <div className="relative pl-12 mb-3">
+                                            {/* Rail Node Dot */}
+                                            <div className={`absolute left-[18px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full ${decade.dot} border-2 border-black shadow-[0_0_10px_currentColor] z-10`} />
+
+                                            <div
+                                                className={`bg-gradient-to-r from-zinc-900/90 via-zinc-900/80 to-zinc-950/90 border border-white/10 hover:border-white/25 border-l-4 ${decade.border} p-3 rounded-2xl flex items-center gap-3 backdrop-blur-md shadow-xl transition-all duration-200 cursor-pointer group active:scale-[0.98]`}
+                                                onClick={() => setPreviewTrack(track)}
+                                                title="Toca para ver portada completa y detalles"
+                                            >
+                                                {/* Album Art / Vinyl Thumb */}
+                                                <div className="relative flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden shadow-md border border-white/10 group-hover:border-white/30 bg-zinc-950 flex items-center justify-center">
+                                                    {track.album?.images?.[0]?.url ? (
+                                                        <img
+                                                            src={track.album.images[0].url}
+                                                            alt={track.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <Disc size={20} className="text-gray-400" />
+                                                    )}
+                                                    <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-xl" />
+                                                </div>
+
+                                                {/* Song Details */}
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                        <span className="font-black text-sm text-white tracking-tight">
+                                                            {releaseYear}
+                                                        </span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${decade.bg}`}>
+                                                            {decade.label}
+                                                        </span>
+                                                    </div>
+                                                    <p className="font-bold truncate text-xs text-white group-hover:text-emerald-300 transition-colors">
+                                                        {track.name}
+                                                    </p>
+                                                    <p className="text-gray-400 text-[11px] truncate">
+                                                        {track.artists?.[0]?.name}
+                                                    </p>
+                                                </div>
+
+                                                {/* Zoom Magnifier Icon */}
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-1 text-gray-400 hover:text-white">
+                                                    <Search size={15} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Insertion Slot After This Card */}
+                                        {gameState === 'playing' && (
+                                            <div className="relative pl-12 mb-3">
+                                                {/* Rail Node Indicator */}
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-zinc-950 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] z-10">
+                                                    <Plus size={11} className="stroke-[3]" />
+                                                </div>
+
+                                                <button
+                                                    onClick={() => handleGuess(i + 1)}
+                                                    className="w-full text-left p-3 rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-950/20 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all font-bold text-xs active:scale-[0.98] group shadow-sm hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-black">
+                                                            {isLast
+                                                                ? '⏩ Ranura Final (Más Reciente)'
+                                                                : `⏳ Entre ${releaseYear} y ${nextYear}`
+                                                            }
+                                                        </span>
+                                                        <span className="text-emerald-400 font-black opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            Tocar para colocar ➜
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-gray-300 text-xs mt-0.5 truncate font-semibold">
+                                                        {isLast
+                                                            ? `Más reciente que ${releaseYear} · "${track.name}"`
+                                                            : `Entre "${track.name}" y "${nextTrack?.name}"`
+                                                        }
+                                                    </p>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            {/* Footer: Presente / Más Reciente */}
+                            <div className="flex items-center gap-2 mt-2 pl-3 text-cyan-400/80 text-[10px] font-black uppercase tracking-widest">
+                                <span className="w-7 h-7 rounded-full bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shadow-sm">
+                                    <ArrowDown size={13} />
+                                </span>
+                                <span>Cronología: Más Recientes (Éxitos Hoy)</span>
+                            </div>
                         </div>
                     </div>
                 )}
