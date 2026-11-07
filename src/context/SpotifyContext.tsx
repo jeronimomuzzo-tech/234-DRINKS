@@ -7,7 +7,7 @@ interface SpotifyContextType {
     deviceId: string | null;
     isPaused: boolean;
     isActive: boolean;
-    login: (target?: string) => void;
+    login: (target?: string, forceDialog?: boolean) => void;
     logout: () => void;
     refreshTokenNow: () => Promise<string | null>;
 }
@@ -306,7 +306,12 @@ export const SpotifyProvider = ({ children }: { children: React.ReactNode }) => 
         }
     }, [token, refreshTokenNow]);
 
-    const login = (target?: string) => loginWithSpotify(target);
+    const login = (target?: string, forceDialog: boolean = false) => {
+        if (forceDialog) {
+            logout();
+        }
+        loginWithSpotify(target, forceDialog);
+    };
 
     return (
         <SpotifyContext.Provider value={{ token, player, deviceId, isPaused, isActive, login, logout, refreshTokenNow }}>

@@ -36,7 +36,7 @@ export const openSpotifyApp = () => {
     window.location.href = 'spotify://';
 };
 
-export const loginWithSpotify = async (redirectTarget?: string) => {
+export const loginWithSpotify = async (redirectTarget?: string, forceDialog: boolean = false) => {
     if (!CLIENT_ID) {
         alert("Error: Falta la 'Client ID' de Spotify. Configura la variable VITE_SPOTIFY_CLIENT_ID.");
         return;
@@ -55,7 +55,7 @@ export const loginWithSpotify = async (redirectTarget?: string) => {
     const scope = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-read-private playlist-read-collaborative';
     const authUrl = new URL("https://accounts.spotify.com/authorize");
 
-    const params = {
+    const params: Record<string, string> = {
         response_type: 'code',
         client_id: CLIENT_ID,
         scope,
@@ -63,6 +63,10 @@ export const loginWithSpotify = async (redirectTarget?: string) => {
         code_challenge: codeChallenge,
         redirect_uri: REDIRECT_URI,
     };
+
+    if (forceDialog) {
+        params.show_dialog = 'true';
+    }
 
     authUrl.search = new URLSearchParams(params).toString();
 

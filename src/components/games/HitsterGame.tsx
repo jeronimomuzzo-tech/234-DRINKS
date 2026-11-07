@@ -81,7 +81,7 @@ const getTeamColor = (t: Team) => {
 };
 
 export function HitsterGame({ onExit }: { onExit: () => void }) {
-    const { token, player, deviceId, login, refreshTokenNow } = useSpotify();
+    const { token, player, deviceId, login, logout, refreshTokenNow } = useSpotify();
 
     // Game lifecycle
     const [gameState, setGameState] = useState<
@@ -394,6 +394,14 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                 }
             } else if (data?.error) {
                 console.warn("Spotify: Playlist load error", data.error);
+                const status = data.error.status;
+                const message = data.error.message || '';
+
+                if (status === 403 || message.toLowerCase().includes('registered') || message.toLowerCase().includes('developer')) {
+                    setPlaylistError("⚠️ Esta cuenta no está habilitada en el Spotify Developer Dashboard (modo desarrollo). Para que tus amigos puedan usar sus cuentas, debes agregar sus correos en 'User Management' de developer.spotify.com.");
+                    return;
+                }
+
                 // Attempt refresh if token was expired
                 const freshToken = await refreshTokenNow();
                 if (freshToken) {
@@ -402,9 +410,12 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                         setMyPlaylists(retry.items);
                         if (!searchQuery.trim()) setSearchResults(retry.items);
                         return;
+                    } else if (retry?.error?.status === 403) {
+                        setPlaylistError("⚠️ Esta cuenta no está habilitada en el Spotify Developer Dashboard (modo desarrollo). Agrega su email en 'User Management'.");
+                        return;
                     }
                 }
-                setPlaylistError("No se pudieron cargar tus playlists. Puedes buscar música arriba o re-conectar tu cuenta.");
+                setPlaylistError(message || "No se pudieron cargar tus playlists. Puedes buscar música arriba o re-conectar tu cuenta.");
             }
         } catch (e) {
             console.error("Error loading user playlists", e);
@@ -437,6 +448,12 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                 const globalData = await searchPlaylists(token, q);
                 if (globalData?.playlists?.items) {
                     globalResults = globalData.playlists.items.filter((item: any) => item !== null);
+                } else if (globalData?.error) {
+                    const status = globalData.error.status;
+                    const message = globalData.error.message || '';
+                    if (status === 403 || message.toLowerCase().includes('registered') || message.toLowerCase().includes('developer')) {
+                        setPlaylistError("⚠️ Cuenta no registrada en el Spotify Developer Dashboard. Agrega su correo en 'User Management' de developer.spotify.com.");
+                    }
                 }
 
                 let localMatches: any[] = [];
@@ -761,8 +778,8 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
 
             {playlistError && (
                 <div className="bg-amber-950/40 border border-amber-500/40 p-3.5 rounded-2xl text-center space-y-2 mb-3">
-                    <p className="text-xs text-amber-200">{playlistError}</p>
-                    <div className="flex gap-2 justify-center">
+                    <p className="text-xs text-amber-200 leading-relaxed">{playlistError}</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
                         <button
                             onClick={loadMyPlaylists}
                             className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-colors"
@@ -770,10 +787,10 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                             <RefreshCw size={12} /> Reintentar
                         </button>
                         <button
-                            onClick={() => login('hitster')}
-                            className="px-3 py-1.5 bg-[#1DB954] hover:bg-green-400 text-black rounded-xl text-xs font-bold flex items-center gap-1 transition-transform active:scale-95"
+                            onClick={() => login('hitster', true)}
+                            className="px-3 py-1.5 bg-[#1DB954] hover:bg-green-400 text-black rounded-xl text-xs font-bold flex items-center gap-1 transition-transform active:scale-95 shadow"
                         >
-                            Re-conectar Spotify
+                            Cambiar Cuenta / Re-conectar
                         </button>
                     </div>
                 </div>
@@ -799,9 +816,9 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                         <p className="text-xs text-gray-400 max-w-xs">
                             {searchQuery
                                 ? 'Prueba con otro género o artista (ej: Reggaeton, Cumbia, Rock).'
-                                : 'Si guardas playlists en tu cuenta de Spotify aparecerán aquí. También puedes buscar cualquier música arriba o re-conectar.'}
+                                : 'Si guardas playlists en tu cuenta de Spotify aparecerán aquí. También puedes buscar cualquier música arriba o cambiar de cuenta.'}
                         </p>
-                        <div className="flex gap-2 pt-2">
+                        <div className="flex flex-wrap gap-2 justify-center pt-2">
                             <button
                                 onClick={loadMyPlaylists}
                                 className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors"
@@ -809,10 +826,10 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                                 <RefreshCw size={13} /> Recargar
                             </button>
                             <button
-                                onClick={() => login('hitster')}
+                                onClick={() => login('hitster', true)}
                                 className="px-4 py-2 bg-[#1DB954] hover:bg-green-400 text-black text-xs font-bold rounded-xl flex items-center gap-1.5 shadow transition-transform active:scale-95"
                             >
-                                Re-conectar Spotify
+                                Cambiar Cuenta / Re-conectar
                             </button>
                         </div>
                     </div>
