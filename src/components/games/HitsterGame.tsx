@@ -1326,121 +1326,81 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                             </div>
                         )}
 
-                        {/* 2. Hero Vinyl Turntable (Sticky Top) */}
-                        <div className="sticky top-0 z-20 flex flex-col items-center mb-5 pb-3 bg-gradient-to-b from-black via-black/95 to-transparent w-full">
-                            <div className="relative w-full max-w-md p-4 rounded-3xl bg-gradient-to-b from-zinc-900/90 via-zinc-950/90 to-black/90 border border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.85)] backdrop-blur-xl flex flex-col items-center overflow-hidden">
-                                {/* Ambient Background Glow */}
-                                <div className={`absolute -top-12 -right-12 w-36 h-36 rounded-full blur-3xl opacity-30 ${getTeamColor(currentTeam).glow} bg-gradient-to-br`} />
-
-                                <div className="flex items-center gap-4 w-full">
-                                    {/* Realistic Rotating Vinyl Record */}
-                                    <div className="relative flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28">
-                                        {/* Vinyl Outer Edge & Grooves */}
-                                        <div className={`w-full h-full rounded-full bg-gradient-to-tr from-zinc-950 via-zinc-900 to-zinc-950 border-4 border-zinc-800 shadow-2xl flex items-center justify-center relative overflow-hidden ${
-                                            gameState === 'playing' ? 'animate-spin-slow' : ''
-                                        }`}>
-                                            {/* Micro Vinyl Grooves */}
-                                            <div className="absolute inset-1.5 rounded-full border border-zinc-700/40" />
-                                            <div className="absolute inset-3 rounded-full border border-zinc-800" />
-                                            <div className="absolute inset-4 rounded-full border border-zinc-700/30" />
-                                            <div className="absolute inset-6 rounded-full border border-zinc-800/80" />
-
-                                            {/* Gloss Light Reflection */}
-                                            <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
-
-                                            {/* Center Vinyl Label */}
-                                            <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 flex flex-col items-center justify-center shadow-inner border-2 border-zinc-950">
-                                                <div className="w-2.5 h-2.5 rounded-full bg-zinc-950 shadow-inner mb-0.5" />
-                                                <span className="text-[9px] font-black text-white leading-none">?</span>
-                                            </div>
+                        {/* 2. Hero Vinyl Turntable (Compact & Sleek) */}
+                        <div className="sticky top-0 z-20 flex flex-col items-center mb-3 pb-2 bg-gradient-to-b from-black via-black/95 to-transparent w-full">
+                            <div className="relative w-full max-w-md p-3 rounded-2xl bg-zinc-900/90 border border-white/10 shadow-xl backdrop-blur-xl flex items-center justify-between gap-3 overflow-hidden">
+                                {/* Rotating Mini Vinyl Record */}
+                                <div className="relative flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16">
+                                    <div className={`w-full h-full rounded-full bg-gradient-to-tr from-zinc-950 via-zinc-900 to-zinc-950 border-2 border-zinc-800 shadow-xl flex items-center justify-center relative overflow-hidden ${
+                                        gameState === 'playing' ? 'animate-spin-slow' : ''
+                                    }`}>
+                                        <div className="absolute inset-1 rounded-full border border-zinc-700/40" />
+                                        <div className="absolute inset-2.5 rounded-full border border-zinc-800/80" />
+                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
+                                        <div className="relative w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-inner border border-zinc-950">
+                                            <span className="text-[10px] font-black text-white">?</span>
                                         </div>
-                                    </div>
-
-                                    {/* Turntable Info & Live Equalizer */}
-                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                                EN VIVO
-                                            </span>
-                                            {/* Audio Wave Visualizer Bars */}
-                                            <div className="flex items-end gap-0.5 h-4 px-1">
-                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-1" />
-                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-2" />
-                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-3" />
-                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-4" />
-                                                <span className="w-1 bg-emerald-400 rounded-full animate-bar-5" />
-                                            </div>
-                                        </div>
-
-                                        <h3 className="text-sm sm:text-base font-black text-white leading-snug">
-                                            ¿En qué año se lanzó?
-                                        </h3>
-                                        <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">
-                                            Escucha atentamente e inserta en la posición correcta de tu cronología.
-                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Audio Control Buttons */}
-                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5 w-full justify-between">
+                                {/* Live info & Equalizer */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Sonando Ahora</span>
+                                        <div className="flex items-end gap-0.5 h-3 ml-1">
+                                            <span className="w-0.5 bg-emerald-400 rounded-full animate-bar-1" />
+                                            <span className="w-0.5 bg-emerald-400 rounded-full animate-bar-2" />
+                                            <span className="w-0.5 bg-emerald-400 rounded-full animate-bar-3" />
+                                            <span className="w-0.5 bg-emerald-400 rounded-full animate-bar-4" />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-white font-bold truncate">
+                                        ¿En qué posición cronológica va?
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 truncate">
+                                        Toca una ranura ➕ para adivinar
+                                    </p>
+                                </div>
+
+                                {/* Quick Audio Controls */}
+                                <div className="flex flex-col gap-1 flex-shrink-0">
                                     <button
                                         onClick={replayCurrentTrack}
                                         disabled={isResuming}
-                                        className="flex-1 py-1.5 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 font-bold text-xs rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                                        className="py-1 px-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[11px] rounded-lg border border-emerald-500/30 flex items-center gap-1 transition-all active:scale-95"
                                         title="Volver a reproducir"
                                     >
-                                        <Volume2 size={13} className={isResuming ? 'animate-spin' : ''} />
-                                        <span>{isResuming ? 'Conectando...' : '¿No suena? Forzar Play ▶️'}</span>
+                                        <Volume2 size={11} className={isResuming ? 'animate-spin' : ''} />
+                                        <span>{isResuming ? '...' : 'Play ▶'}</span>
                                     </button>
                                     <button
                                         onClick={openSpotifyApp}
-                                        className="py-1.5 px-3 bg-white/5 hover:bg-white/10 active:scale-95 text-gray-300 font-bold text-xs rounded-xl border border-white/10 flex items-center justify-center gap-1 transition-all"
+                                        className="py-1 px-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-medium text-[10px] rounded-lg border border-white/10 flex items-center justify-center transition-all"
                                     >
-                                        Abrir Spotify
+                                        Spotify
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 3. The Interactive Chronological Rail */}
-                        <div className="flex-1 max-w-md mx-auto w-full relative pb-28">
-                            {/* Visual Rail Line (Vertical Axis) */}
-                            <div className="absolute left-6 top-6 bottom-6 w-1 bg-gradient-to-b from-amber-500/40 via-purple-500/40 to-cyan-500/40 rounded-full shadow-[0_0_12px_rgba(168,85,247,0.3)] pointer-events-none" />
-
-                            {/* Header: Pasado / Más Antiguo */}
-                            <div className="flex items-center gap-2 mb-3 pl-3 text-amber-400/80 text-[10px] font-black uppercase tracking-widest">
-                                <span className="w-7 h-7 rounded-full bg-amber-950/60 border border-amber-500/40 flex items-center justify-center text-amber-300 shadow-sm">
-                                    <ArrowUp size={13} />
-                                </span>
-                                <span>Cronología: Más Antiguas (Pasado)</span>
+                        {/* 3. Simple & Intuitive Chronological Timeline */}
+                        <div className="flex-1 max-w-md mx-auto w-full flex flex-col space-y-2 pb-24">
+                            {/* Direction Indicator: Top */}
+                            <div className="flex items-center justify-center gap-1 text-[10px] text-gray-400 font-bold uppercase tracking-wider py-1">
+                                <ArrowUp size={11} className="text-amber-400" />
+                                <span>Más Antiguas (Pasado)</span>
                             </div>
 
                             {/* Slot 0 (Earliest Position) */}
                             {gameState === 'playing' && (
-                                <div className="relative pl-12 mb-3">
-                                    {/* Rail Node Indicator */}
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-zinc-950 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] z-10">
-                                        <Plus size={11} className="stroke-[3]" />
-                                    </div>
-
-                                    <button
-                                        onClick={() => handleGuess(0)}
-                                        className="w-full text-left p-3 rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-950/20 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all font-bold text-xs active:scale-[0.98] group shadow-sm hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-black">
-                                                ⏪ Ranura Inicial (Más Antigua)
-                                            </span>
-                                            <span className="text-emerald-400 font-black opacity-0 group-hover:opacity-100 transition-opacity">
-                                                Tocar para colocar ➜
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-300 text-xs mt-0.5 truncate font-semibold">
-                                            Antes de {teams[currentTeam].timeline[0]?.album?.release_date?.split('-')[0] || '1900'} · "{teams[currentTeam].timeline[0]?.name || 'Primera canción'}"
-                                        </p>
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => handleGuess(0)}
+                                    className="w-full py-2.5 px-3 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 group shadow-sm hover:border-emerald-400"
+                                >
+                                    <Plus size={14} className="stroke-[3] text-emerald-400 group-hover:scale-125 transition-transform" />
+                                    <span>Antes de {teams[currentTeam].timeline[0]?.album?.release_date?.split('-')[0] || '1900'}</span>
+                                </button>
                             )}
 
                             {/* Chronological Track Cards & Insertion Slots */}
@@ -1452,98 +1412,66 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                                 const nextYear = nextTrack?.album?.release_date?.split('-')[0];
 
                                 return (
-                                    <div key={track.id + i} className="relative flex flex-col">
-                                        {/* Timeline Song Card */}
-                                        <div className="relative pl-12 mb-3">
-                                            {/* Rail Node Dot */}
-                                            <div className={`absolute left-[18px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full ${decade.dot} border-2 border-black shadow-[0_0_10px_currentColor] z-10`} />
+                                    <div key={track.id + i} className="w-full flex flex-col space-y-2">
+                                        {/* Clean Song Card */}
+                                        <div
+                                            onClick={() => setPreviewTrack(track)}
+                                            className="w-full bg-zinc-900/90 border border-white/10 hover:border-white/25 p-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer group shadow-md active:scale-[0.99]"
+                                            title="Toca para ver carátula y detalles"
+                                        >
+                                            {/* Year Capsule (Hero of the Card) */}
+                                            <div className={`flex-shrink-0 w-16 py-1.5 rounded-xl flex flex-col items-center justify-center border font-black ${decade.bg}`}>
+                                                <span className="text-base text-white leading-none">{releaseYear}</span>
+                                                <span className="text-[9px] uppercase tracking-wider opacity-80 mt-0.5">{decade.label.split(' ')[0]}</span>
+                                            </div>
 
-                                            <div
-                                                className={`bg-gradient-to-r from-zinc-900/90 via-zinc-900/80 to-zinc-950/90 border border-white/10 hover:border-white/25 border-l-4 ${decade.border} p-3 rounded-2xl flex items-center gap-3 backdrop-blur-md shadow-xl transition-all duration-200 cursor-pointer group active:scale-[0.98]`}
-                                                onClick={() => setPreviewTrack(track)}
-                                                title="Toca para ver portada completa y detalles"
-                                            >
-                                                {/* Album Art / Vinyl Thumb */}
-                                                <div className="relative flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden shadow-md border border-white/10 group-hover:border-white/30 bg-zinc-950 flex items-center justify-center">
-                                                    {track.album?.images?.[0]?.url ? (
-                                                        <img
-                                                            src={track.album.images[0].url}
-                                                            alt={track.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <Disc size={20} className="text-gray-400" />
-                                                    )}
-                                                    <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-xl" />
-                                                </div>
+                                            {/* Album Art Thumb */}
+                                            <div className="relative flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-white/10 bg-black flex items-center justify-center shadow-inner">
+                                                {track.album?.images?.[0]?.url ? (
+                                                    <img
+                                                        src={track.album.images[0].url}
+                                                        alt={track.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <Disc size={18} className="text-gray-400" />
+                                                )}
+                                            </div>
 
-                                                {/* Song Details */}
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2 mb-0.5">
-                                                        <span className="font-black text-sm text-white tracking-tight">
-                                                            {releaseYear}
-                                                        </span>
-                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${decade.bg}`}>
-                                                            {decade.label}
-                                                        </span>
-                                                    </div>
-                                                    <p className="font-bold truncate text-xs text-white group-hover:text-emerald-300 transition-colors">
-                                                        {track.name}
-                                                    </p>
-                                                    <p className="text-gray-400 text-[11px] truncate">
-                                                        {track.artists?.[0]?.name}
-                                                    </p>
-                                                </div>
+                                            {/* Track Title & Artist */}
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-bold text-xs sm:text-sm text-white truncate group-hover:text-emerald-300 transition-colors">
+                                                    {track.name}
+                                                </p>
+                                                <p className="text-gray-400 text-[11px] truncate mt-0.5">
+                                                    {track.artists?.[0]?.name}
+                                                </p>
+                                            </div>
 
-                                                {/* Zoom Magnifier Icon */}
-                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-1 text-gray-400 hover:text-white">
-                                                    <Search size={15} />
-                                                </div>
+                                            {/* Inspect Icon */}
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 pr-1">
+                                                <Search size={14} />
                                             </div>
                                         </div>
 
-                                        {/* Insertion Slot After This Card */}
+                                        {/* Clear & Intuitive Insertion Slot */}
                                         {gameState === 'playing' && (
-                                            <div className="relative pl-12 mb-3">
-                                                {/* Rail Node Indicator */}
-                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-zinc-950 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] z-10">
-                                                    <Plus size={11} className="stroke-[3]" />
-                                                </div>
-
-                                                <button
-                                                    onClick={() => handleGuess(i + 1)}
-                                                    className="w-full text-left p-3 rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-950/20 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all font-bold text-xs active:scale-[0.98] group shadow-sm hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-black">
-                                                            {isLast
-                                                                ? '⏩ Ranura Final (Más Reciente)'
-                                                                : `⏳ Entre ${releaseYear} y ${nextYear}`
-                                                            }
-                                                        </span>
-                                                        <span className="text-emerald-400 font-black opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            Tocar para colocar ➜
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-gray-300 text-xs mt-0.5 truncate font-semibold">
-                                                        {isLast
-                                                            ? `Más reciente que ${releaseYear} · "${track.name}"`
-                                                            : `Entre "${track.name}" y "${nextTrack?.name}"`
-                                                        }
-                                                    </p>
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={() => handleGuess(i + 1)}
+                                                className="w-full py-2.5 px-3 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 group shadow-sm hover:border-emerald-400"
+                                            >
+                                                <Plus size={14} className="stroke-[3] text-emerald-400 group-hover:scale-125 transition-transform" />
+                                                <span>{isLast ? `Después de ${releaseYear}` : `Entre ${releaseYear} y ${nextYear}`}</span>
+                                            </button>
                                         )}
                                     </div>
                                 );
                             })}
 
-                            {/* Footer: Presente / Más Reciente */}
-                            <div className="flex items-center gap-2 mt-2 pl-3 text-cyan-400/80 text-[10px] font-black uppercase tracking-widest">
-                                <span className="w-7 h-7 rounded-full bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shadow-sm">
-                                    <ArrowDown size={13} />
-                                </span>
-                                <span>Cronología: Más Recientes (Éxitos Hoy)</span>
+                            {/* Direction Indicator: Bottom */}
+                            <div className="flex items-center justify-center gap-1 text-[10px] text-gray-400 font-bold uppercase tracking-wider py-1">
+                                <ArrowDown size={11} className="text-cyan-400" />
+                                <span>Más Recientes (Hoy)</span>
                             </div>
                         </div>
                     </div>
