@@ -1326,57 +1326,57 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                             </div>
                         )}
 
-                        {/* 2. Hero Vinyl Turntable (Compact & Sleek) */}
+                        {/* 2. Hero Vinyl Turntable (Prominent & Responsive) */}
                         <div className="sticky top-0 z-20 flex flex-col items-center mb-3 pb-2 bg-gradient-to-b from-black via-black/95 to-transparent w-full">
-                            <div className="relative w-full max-w-md p-3 rounded-2xl bg-zinc-900/90 border border-white/10 shadow-xl backdrop-blur-xl flex items-center justify-between gap-3 overflow-hidden">
-                                {/* Rotating Mini Vinyl Record */}
-                                <div className="relative flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16">
-                                    <div className={`w-full h-full rounded-full bg-gradient-to-tr from-zinc-950 via-zinc-900 to-zinc-950 border-2 border-zinc-800 shadow-xl flex items-center justify-center relative overflow-hidden ${
+                            <div className="relative w-full max-w-md p-3.5 rounded-3xl bg-zinc-900/95 border border-white/10 shadow-2xl backdrop-blur-xl flex items-center gap-3.5 overflow-hidden">
+                                {/* Prominent Rotating Vinyl Record (80px on mobile, 96px on desktop) */}
+                                <div className="relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24">
+                                    <div className={`w-full h-full rounded-full bg-gradient-to-tr from-zinc-950 via-zinc-900 to-zinc-950 border-2 border-zinc-800 shadow-2xl flex items-center justify-center relative overflow-hidden ${
                                         gameState === 'playing' ? 'animate-spin-slow' : ''
                                     }`}>
-                                        <div className="absolute inset-1 rounded-full border border-zinc-700/40" />
-                                        <div className="absolute inset-2.5 rounded-full border border-zinc-800/80" />
-                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
-                                        <div className="relative w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-inner border border-zinc-950">
-                                            <span className="text-[10px] font-black text-white">?</span>
+                                        <div className="absolute inset-1.5 rounded-full border border-zinc-700/40" />
+                                        <div className="absolute inset-3 rounded-full border border-zinc-800/80" />
+                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/15 via-transparent to-white/5 pointer-events-none" />
+                                        <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-inner border border-zinc-950">
+                                            <span className="text-xs font-black text-white">?</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Live info & Equalizer */}
+                                {/* Live Info: Concise & High Impact */}
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                    <div className="flex items-center gap-1.5 mb-1">
                                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Sonando Ahora</span>
-                                        <div className="flex items-end gap-0.5 h-3 ml-1">
+                                        <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider">Sonando</span>
+                                        <div className="flex items-end gap-0.5 h-3 ml-0.5">
                                             <span className="w-0.5 bg-emerald-400 rounded-full animate-bar-1" />
                                             <span className="w-0.5 bg-emerald-400 rounded-full animate-bar-2" />
                                             <span className="w-0.5 bg-emerald-400 rounded-full animate-bar-3" />
                                             <span className="w-0.5 bg-emerald-400 rounded-full animate-bar-4" />
                                         </div>
                                     </div>
-                                    <p className="text-xs text-white font-bold truncate">
-                                        ¿En qué posición cronológica va?
-                                    </p>
-                                    <p className="text-[10px] text-gray-400 truncate">
-                                        Toca una ranura ➕ para adivinar
+                                    <h3 className="text-base sm:text-lg font-black text-white leading-tight">
+                                        ¿Año de este Hit?
+                                    </h3>
+                                    <p className="text-xs text-gray-400 mt-0.5 truncate">
+                                        Elige su lugar abajo 👇
                                     </p>
                                 </div>
 
                                 {/* Quick Audio Controls */}
-                                <div className="flex flex-col gap-1 flex-shrink-0">
+                                <div className="flex flex-col gap-1.5 flex-shrink-0">
                                     <button
                                         onClick={replayCurrentTrack}
                                         disabled={isResuming}
-                                        className="py-1 px-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[11px] rounded-lg border border-emerald-500/30 flex items-center gap-1 transition-all active:scale-95"
+                                        className="py-1.5 px-3 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-black text-xs rounded-xl border border-emerald-500/30 flex items-center justify-center gap-1 active:scale-95 transition-all shadow-sm"
                                         title="Volver a reproducir"
                                     >
-                                        <Volume2 size={11} className={isResuming ? 'animate-spin' : ''} />
-                                        <span>{isResuming ? '...' : 'Play ▶'}</span>
+                                        <Volume2 size={13} className={isResuming ? 'animate-spin' : ''} />
+                                        <span>{isResuming ? '...' : 'Play'}</span>
                                     </button>
                                     <button
                                         onClick={openSpotifyApp}
-                                        className="py-1 px-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-medium text-[10px] rounded-lg border border-white/10 flex items-center justify-center transition-all"
+                                        className="py-1 px-2.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-bold text-[10px] rounded-lg border border-white/10 flex items-center justify-center transition-all"
                                     >
                                         Spotify
                                     </button>
@@ -1384,21 +1384,21 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                             </div>
                         </div>
 
-                        {/* 3. Simple & Intuitive Chronological Timeline */}
-                        <div className="flex-1 max-w-md mx-auto w-full flex flex-col space-y-2 pb-24">
+                        {/* 3. Simple & Prominent Chronological Timeline */}
+                        <div className="flex-1 max-w-md mx-auto w-full flex flex-col space-y-2.5 pb-24">
                             {/* Direction Indicator: Top */}
-                            <div className="flex items-center justify-center gap-1 text-[10px] text-gray-400 font-bold uppercase tracking-wider py-1">
-                                <ArrowUp size={11} className="text-amber-400" />
-                                <span>Más Antiguas (Pasado)</span>
+                            <div className="flex items-center justify-center gap-1 text-[10px] text-gray-500 font-bold uppercase tracking-wider py-0.5">
+                                <ArrowUp size={11} className="text-amber-400/80" />
+                                <span>Pasado</span>
                             </div>
 
                             {/* Slot 0 (Earliest Position) */}
                             {gameState === 'playing' && (
                                 <button
                                     onClick={() => handleGuess(0)}
-                                    className="w-full py-2.5 px-3 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 group shadow-sm hover:border-emerald-400"
+                                    className="w-full py-3 px-4 rounded-2xl border border-dashed border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 group shadow-sm hover:border-emerald-400"
                                 >
-                                    <Plus size={14} className="stroke-[3] text-emerald-400 group-hover:scale-125 transition-transform" />
+                                    <Plus size={16} className="stroke-[3] text-emerald-400 group-hover:scale-125 transition-transform" />
                                     <span>Antes de {teams[currentTeam].timeline[0]?.album?.release_date?.split('-')[0] || '1900'}</span>
                                 </button>
                             )}
@@ -1412,21 +1412,15 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                                 const nextYear = nextTrack?.album?.release_date?.split('-')[0];
 
                                 return (
-                                    <div key={track.id + i} className="w-full flex flex-col space-y-2">
-                                        {/* Clean Song Card */}
+                                    <div key={track.id + i} className="w-full flex flex-col space-y-2.5">
+                                        {/* Prominent Song Card */}
                                         <div
                                             onClick={() => setPreviewTrack(track)}
-                                            className="w-full bg-zinc-900/90 border border-white/10 hover:border-white/25 p-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer group shadow-md active:scale-[0.99]"
+                                            className="w-full bg-zinc-900/90 border border-white/10 hover:border-white/25 p-3 sm:p-3.5 rounded-2xl flex items-center gap-3.5 transition-all cursor-pointer group shadow-lg active:scale-[0.99]"
                                             title="Toca para ver carátula y detalles"
                                         >
-                                            {/* Year Capsule (Hero of the Card) */}
-                                            <div className={`flex-shrink-0 w-16 py-1.5 rounded-xl flex flex-col items-center justify-center border font-black ${decade.bg}`}>
-                                                <span className="text-base text-white leading-none">{releaseYear}</span>
-                                                <span className="text-[9px] uppercase tracking-wider opacity-80 mt-0.5">{decade.label.split(' ')[0]}</span>
-                                            </div>
-
-                                            {/* Album Art Thumb */}
-                                            <div className="relative flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-white/10 bg-black flex items-center justify-center shadow-inner">
+                                            {/* Album Art Thumb (56px) */}
+                                            <div className="relative flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border border-white/10 bg-black flex items-center justify-center shadow-md">
                                                 {track.album?.images?.[0]?.url ? (
                                                     <img
                                                         src={track.album.images[0].url}
@@ -1434,33 +1428,34 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
-                                                    <Disc size={18} className="text-gray-400" />
+                                                    <Disc size={22} className="text-gray-400" />
                                                 )}
                                             </div>
 
                                             {/* Track Title & Artist */}
                                             <div className="min-w-0 flex-1">
-                                                <p className="font-bold text-xs sm:text-sm text-white truncate group-hover:text-emerald-300 transition-colors">
+                                                <p className="font-black text-sm sm:text-base text-white truncate leading-tight group-hover:text-emerald-300 transition-colors">
                                                     {track.name}
                                                 </p>
-                                                <p className="text-gray-400 text-[11px] truncate mt-0.5">
+                                                <p className="text-gray-400 text-xs truncate mt-1">
                                                     {track.artists?.[0]?.name}
                                                 </p>
                                             </div>
 
-                                            {/* Inspect Icon */}
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 pr-1">
-                                                <Search size={14} />
+                                            {/* Year Capsule (Large & Prominent) */}
+                                            <div className={`flex-shrink-0 px-3 py-2 rounded-xl flex flex-col items-center justify-center border font-black ${decade.bg} shadow-sm`}>
+                                                <span className="text-lg sm:text-xl text-white leading-none tracking-tight">{releaseYear}</span>
+                                                <span className="text-[9px] uppercase tracking-wider opacity-80 mt-0.5">{decade.label.split(' ')[0]}</span>
                                             </div>
                                         </div>
 
-                                        {/* Clear & Intuitive Insertion Slot */}
+                                        {/* Clear & Touch-Friendly Insertion Slot */}
                                         {gameState === 'playing' && (
                                             <button
                                                 onClick={() => handleGuess(i + 1)}
-                                                className="w-full py-2.5 px-3 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 group shadow-sm hover:border-emerald-400"
+                                                className="w-full py-3 px-4 rounded-2xl border border-dashed border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 group shadow-sm hover:border-emerald-400"
                                             >
-                                                <Plus size={14} className="stroke-[3] text-emerald-400 group-hover:scale-125 transition-transform" />
+                                                <Plus size={16} className="stroke-[3] text-emerald-400 group-hover:scale-125 transition-transform" />
                                                 <span>{isLast ? `Después de ${releaseYear}` : `Entre ${releaseYear} y ${nextYear}`}</span>
                                             </button>
                                         )}
@@ -1469,9 +1464,9 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                             })}
 
                             {/* Direction Indicator: Bottom */}
-                            <div className="flex items-center justify-center gap-1 text-[10px] text-gray-400 font-bold uppercase tracking-wider py-1">
-                                <ArrowDown size={11} className="text-cyan-400" />
-                                <span>Más Recientes (Hoy)</span>
+                            <div className="flex items-center justify-center gap-1 text-[10px] text-gray-500 font-bold uppercase tracking-wider py-0.5">
+                                <ArrowDown size={11} className="text-cyan-400/80" />
+                                <span>Presente</span>
                             </div>
                         </div>
                     </div>
