@@ -158,6 +158,7 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
     const [selectedRival, setSelectedRival] = useState<RivalPre | null>(null);
     const [copiedRoomCode, setCopiedRoomCode] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [duelWhatsAppPrompt, setDuelWhatsAppPrompt] = useState<{ rivalName: string; title: string } | null>(null);
 
     // --- HELPER: In-App Toast & Audio ---
     const showNotice = (title: string, body: string) => {
@@ -390,6 +391,7 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
 
         setActiveDuel(duel);
         setSelectedRivalForDuel(null);
+        setDuelWhatsAppPrompt({ rivalName: rival.name, title });
 
         // Record history
         const newEvent: PreHistoryItem = {
@@ -461,17 +463,42 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
 
     const rank = fullLeaderboard.findIndex(r => r.id === 'me') + 1;
 
-    // --- WHATSAPP SHARE ---
-    const handleShareWhatsApp = () => {
-        const msg = encodeURIComponent(
-            `🍻 ¡Estamos en la previa con "234 Drinks"! \n` +
-            `🔥 Grupo: "${groupName || 'Nuestra Previa'}"\n` +
-            `📍 Ubicación: ${location}\n` +
-            `🏆 Llevamos ${myScore} tragos (#${rank} en el Ranking)\n` +
-            `⚔️ Código para retarnos o unirte: *${roomCode}*\n\n` +
-            `¡Entra y juega con nosotros!: https://234-drinks.vercel.app`
-        );
-        window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+    // --- WHATSAPP SHARE ENGINE ---
+    const handleShareWhatsApp = (
+        type: 'invite' | 'duel' | 'ranking' = 'invite',
+        extra?: { rivalName?: string; title?: string }
+    ) => {
+        let msg = '';
+        if (type === 'duel') {
+            msg =
+                `⚔️ ¡DUELO DE PREVIAS EN 234 DRINKS! 🍻\n\n` +
+                `🔥 De: "${groupName || 'Nuestra Previa'}" (📍 ${location})\n` +
+                `🎯 Para: "${extra?.rivalName || 'Tu Previa'}"\n\n` +
+                `💥 EL RETO: *${extra?.title || 'Fondo Blanco Grupal'}*\n` +
+                `⏳ Tienen 3 minutos para cumplirlo o arrugan.\n` +
+                `🏆 Si ganan: +5 pts en el Ranking | ❌ Si arrugan: ¡2 tragos al seco!\n\n` +
+                `👉 Entren a responder el duelo aquí: https://234-drinks.vercel.app`;
+        } else if (type === 'ranking') {
+            msg =
+                `🏆 ¡Ranking en Vivo de Previas en 234 Drinks! 🌎\n\n` +
+                `🔥 Grupo: "${groupName || 'Nuestra Previa'}"\n` +
+                `📍 Ubicación: ${location}\n` +
+                `🍺 Marcador: ${myScore} tragos (#${rank} del Ranking)\n` +
+                `👥 Integrantes: ${members.join(', ')}\n\n` +
+                `¿Alguna previa que se anime a retarnos? Código de sala: *${roomCode}*\n` +
+                `👉 Entra y compite: https://234-drinks.vercel.app`;
+        } else {
+            msg =
+                `🍻 ¡Únete a nuestra previa en "234 Drinks"! 🎉\n\n` +
+                `🔥 Grupo: "${groupName || 'Previa 234'}"\n` +
+                `📍 Ubicación: ${location}\n` +
+                `🥃 Trago Insignia: ${selectedDrink}\n` +
+                `🔑 CÓDIGO DE SALA: *${roomCode}*\n\n` +
+                `👉 Entra aquí para sumarte al grupo y llevar la cuenta de tragos:\n` +
+                `https://234-drinks.vercel.app`;
+        }
+
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
     const handleCopyCode = () => {
@@ -547,6 +574,13 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
                         className="w-full py-4 bg-white text-blue-950 font-black text-base rounded-2xl shadow-xl flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-transform"
                     >
                         <Users size={18} className="text-blue-600" /> Armar Mi Previa 🚀
+                    </button>
+
+                    <button
+                        onClick={() => handleShareWhatsApp('invite')}
+                        className="w-full py-3.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-950/20"
+                    >
+                        <MessageCircle size={18} className="text-emerald-400" /> Invitar Amigos por WhatsApp 📲
                     </button>
 
                     <button
@@ -716,6 +750,23 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
                         ))}
                     </div>
                 </div>
+
+                {/* WhatsApp Pre-invite Banner */}
+                <div className="bg-gradient-to-r from-emerald-950/60 to-teal-950/60 border border-emerald-500/40 p-3.5 rounded-2xl flex items-center justify-between shadow-lg">
+                    <div className="min-w-0 pr-2">
+                        <div className="flex items-center gap-1.5 text-xs font-black text-emerald-300">
+                            <Share2 size={13} /> SALA: <span className="font-mono text-white text-xs bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-700">{roomCode}</span>
+                        </div>
+                        <p className="text-[11px] text-emerald-200/80 mt-0.5">Invita a tus amigos por WhatsApp antes de arrancar</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => handleShareWhatsApp('invite')}
+                        className="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 flex-shrink-0 shadow active:scale-95 transition-transform"
+                    >
+                        <MessageCircle size={14} /> WhatsApp
+                    </button>
+                </div>
             </div>
 
             <div className="flex gap-3 pt-3 border-t border-slate-800">
@@ -769,6 +820,22 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
                         placeholder="Buscar por nombre, código o comuna..."
                         className="w-full bg-slate-900 pl-11 pr-4 py-3 rounded-xl text-white text-sm border border-slate-700 focus:border-blue-500 outline-none"
                     />
+                </div>
+
+                {/* Direct WhatsApp Challenge Banner */}
+                <div className="bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/40 p-3 rounded-2xl mb-3 flex items-center justify-between shadow-lg">
+                    <div className="min-w-0 pr-2">
+                        <div className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
+                            <MessageCircle size={14} className="text-emerald-400" /> ¿Retar a amigos por WhatsApp?
+                        </div>
+                        <p className="text-[10px] text-slate-300 mt-0.5">Mándales un link de desafío directo a su chat grupal</p>
+                    </div>
+                    <button
+                        onClick={() => handleShareWhatsApp('duel', { rivalName: 'Tu Casa', title: '🥃 Fondo Blanco Grupal' })}
+                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-xl flex items-center gap-1 flex-shrink-0 shadow active:scale-95 transition-transform"
+                    >
+                        Retar WSP
+                    </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar pb-4">
@@ -923,6 +990,59 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
         );
     };
 
+    // --- MODAL: ENVIAR RETO POR WHATSAPP ---
+    const renderDuelWhatsAppModal = () => {
+        if (!duelWhatsAppPrompt) return null;
+
+        return (
+            <div className="absolute inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-5 animate-in fade-in">
+                <div className="bg-slate-900 border border-emerald-500/40 w-full max-w-sm rounded-3xl p-5 shadow-2xl relative text-center animate-in zoom-in-95">
+                    <button
+                        onClick={() => setDuelWhatsAppPrompt(null)}
+                        className="absolute top-4 right-4 text-slate-400 hover:text-white p-1"
+                    >
+                        <X size={18} />
+                    </button>
+
+                    <div className="w-14 h-14 bg-gradient-to-tr from-emerald-500 to-green-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/30 mb-3">
+                        <MessageCircle size={28} className="text-white" />
+                    </div>
+
+                    <h3 className="text-lg font-black text-white">¡Reto Lanzado! ⚔️</h3>
+                    <p className="text-xs text-slate-300 mt-1 mb-3">
+                        Retaste a <strong>"{duelWhatsAppPrompt.rivalName}"</strong> a: <br />
+                        <span className="text-emerald-400 font-bold text-sm block mt-1">{duelWhatsAppPrompt.title}</span>
+                    </p>
+
+                    <p className="text-[11px] text-slate-400 mb-5">
+                        ¿Quieres avisarles por WhatsApp a su grupo para que respondan y no se hagan los locos?
+                    </p>
+
+                    <div className="space-y-2">
+                        <button
+                            onClick={() => {
+                                handleShareWhatsApp('duel', {
+                                    rivalName: duelWhatsAppPrompt.rivalName,
+                                    title: duelWhatsAppPrompt.title
+                                });
+                                setDuelWhatsAppPrompt(null);
+                            }}
+                            className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-sm rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        >
+                            <MessageCircle size={16} /> Enviar Reto por WhatsApp 📲
+                        </button>
+                        <button
+                            onClick={() => setDuelWhatsAppPrompt(null)}
+                            className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-colors"
+                        >
+                            Continuar en la App
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // --- RENDER MAIN VIEWS ---
     if (view === 'menu') return (
         <div className="h-full bg-slate-950 relative overflow-hidden flex flex-col font-sans select-none">
@@ -960,6 +1080,7 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
             {/* Modals & Overlays */}
             {renderDuelPickerModal()}
             {renderHourlyReportModal()}
+            {renderDuelWhatsAppModal()}
 
             {/* In-App Toast Banner */}
             {inAppToast && (
@@ -990,10 +1111,10 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
                             {roomCode}
                         </button>
                         <button
-                            onClick={handleShareWhatsApp}
-                            className="text-[10px] bg-green-500/20 hover:bg-green-500/30 text-green-300 px-2 py-0.5 rounded-lg border border-green-500/30 flex items-center gap-1 font-bold transition-all"
+                            onClick={() => handleShareWhatsApp('invite')}
+                            className="text-[11px] bg-emerald-500 hover:bg-emerald-400 text-black px-2.5 py-0.5 rounded-lg font-black flex items-center gap-1 shadow-md shadow-emerald-500/20 active:scale-95 transition-all"
                         >
-                            <MessageCircle size={10} /> Compartir
+                            <MessageCircle size={12} /> WhatsApp
                         </button>
                     </div>
                 </div>
@@ -1047,6 +1168,13 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
                             className="flex-1 py-1.5 bg-green-500 hover:bg-green-400 text-black font-black rounded-xl text-xs shadow transition-transform active:scale-95"
                         >
                             ¡Cumplido! (+5 pts) ✅
+                        </button>
+                        <button
+                            onClick={() => handleShareWhatsApp('duel', { rivalName: activeDuel.rivalName, title: activeDuel.title })}
+                            className="py-1.5 px-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-bold rounded-xl text-xs flex items-center gap-1 active:scale-95 transition-all"
+                            title="Enviar o recordar reto por WhatsApp"
+                        >
+                            <MessageCircle size={12} /> Avisar WSP
                         </button>
                         <button
                             onClick={() => handleResolveDuel(false)}
@@ -1109,6 +1237,22 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
                     >
                         <span>+3</span>
                         <span className="text-[9px] opacity-70">Ronda</span>
+                    </button>
+                </div>
+
+                {/* Party Quick Actions */}
+                <div className="grid grid-cols-2 gap-2 w-full mt-3">
+                    <button
+                        onClick={() => setView('join')}
+                        className="py-2.5 px-3 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                    >
+                        <Swords size={14} className="text-red-400" /> Retar Otra Casa
+                    </button>
+                    <button
+                        onClick={() => handleShareWhatsApp('invite')}
+                        className="py-2.5 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                    >
+                        <MessageCircle size={14} className="text-emerald-400" /> Invitar por WSP 📲
                     </button>
                 </div>
             </div>
@@ -1201,6 +1345,14 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
                                 </div>
                             );
                         })}
+
+                        {/* Share Ranking in WhatsApp */}
+                        <button
+                            onClick={() => handleShareWhatsApp('ranking')}
+                            className="w-full py-3 bg-slate-900 border border-slate-700 hover:border-emerald-500/50 text-slate-200 hover:text-emerald-300 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all mt-2 shadow"
+                        >
+                            <MessageCircle size={15} className="text-emerald-400" /> Compartir Ranking en WhatsApp 🏆
+                        </button>
                     </div>
                 )}
 
@@ -1273,8 +1425,8 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
                                     {roomCode}
                                 </div>
                                 <button
-                                    onClick={handleShareWhatsApp}
-                                    className="px-4 py-2 bg-green-500 hover:bg-green-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow"
+                                    onClick={() => handleShareWhatsApp('invite')}
+                                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow active:scale-95 transition-transform"
                                 >
                                     <MessageCircle size={14} /> WhatsApp
                                 </button>

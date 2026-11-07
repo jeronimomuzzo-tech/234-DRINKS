@@ -76,10 +76,12 @@ export const playPartyAlertSound = () => {
 
 // 5. Send Notification (via Service Worker if ready, or Fallback Notification)
 export const sendPreNotification = async (payload: NotificationPayload) => {
-    // Always trigger sound & haptic vibration
+    // Always trigger sound & haptic vibration first
     playPartyAlertSound();
-    if (navigator.vibrate) {
-        navigator.vibrate(payload.vibratePattern || [200, 100, 200, 100, 300]);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try {
+            navigator.vibrate(payload.vibratePattern || [200, 100, 200, 100, 300]);
+        } catch (_) {}
     }
 
     if (!isNotificationSupported() || Notification.permission !== 'granted') {
@@ -88,28 +90,39 @@ export const sendPreNotification = async (payload: NotificationPayload) => {
     }
 
     try {
-        // Try Service Worker registration first (standard for PWAs & Android)
+        let shown = false;
+
+        // Try Service Worker registration with timeout so it NEVER hangs indefinitely
         if ('serviceWorker' in navigator) {
-            const registration = await navigator.serviceWorker.ready;
-            if (registration && registration.showNotification) {
-                await registration.showNotification(payload.title, {
-                    body: payload.body,
-                    icon: payload.icon || '/icon.jpg',
-                    badge: '/icon.svg',
-                    tag: payload.tag || 'prevspre-alert',
-                    vibrate: payload.vibratePattern || [200, 100, 200, 100, 300],
-                    data: payload.data || { url: window.location.href }
-                } as any);
-                return;
+            try {
+                const registration = await Promise.race([
+                    navigator.serviceWorker.ready,
+                    new Promise<null>((resolve) => setTimeout(() => resolve(null), 400))
+                ]);
+                if (registration && 'showNotification' in registration) {
+                    await (registration as ServiceWorkerRegistration).showNotification(payload.title, {
+                        body: payload.body,
+                        icon: payload.icon || '/icon.jpg',
+                        badge: '/icon.svg',
+                        tag: payload.tag || 'prevspre-' + Date.now(),
+                        vibrate: payload.vibratePattern || [200, 100, 200, 100, 300],
+                        data: payload.data || { url: window.location.href }
+                    } as any);
+                    shown = true;
+                }
+            } catch (swErr) {
+                console.warn("ServiceWorker showNotification failed, trying fallback", swErr);
             }
         }
 
-        // Fallback to standard Window Notification
-        new Notification(payload.title, {
-            body: payload.body,
-            icon: payload.icon || '/icon.jpg',
-            tag: payload.tag || 'prevspre-alert'
-        });
+        // Fallback to standard Window Notification if SW was not available
+        if (!shown && typeof Notification !== 'undefined') {
+            new Notification(payload.title, {
+                body: payload.body,
+                icon: payload.icon || '/icon.jpg',
+                tag: payload.tag || 'prevspre-' + Date.now()
+            });
+        }
     } catch (e) {
         console.error("Failed to show notification", e);
     }
