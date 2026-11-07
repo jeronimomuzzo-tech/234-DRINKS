@@ -7,8 +7,7 @@ import {
     getAvailableDevices,
     getUserPlaylists,
     openSpotifyApp,
-    playTrack,
-    resumePlayback
+    playTrack
 } from '../../lib/spotify';
 import {
     Play,
@@ -198,27 +197,15 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         }
 
         const devId = targetDeviceId || deviceId;
+        const contextUri = selectedPlaylist?.uri || (selectedPlaylist?.id ? `spotify:playlist:${selectedPlaylist.id}` : undefined);
+
         try {
-            const res = await playTrack(token, currentTrack.uri, devId || undefined);
+            const res = await playTrack(token, currentTrack.uri, devId || undefined, contextUri);
             if (!res.ok) {
-                // If play with URI failed, send plain resume
-                await resumePlayback(token, devId || undefined);
+                // Fallback direct play
+                await playTrack(token, currentTrack.uri, devId || undefined);
             }
-            setTimeout(async () => {
-                // Double check if playing
-                try {
-                    const check = await fetch('https://api.spotify.com/v1/me/player', {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    if (check.ok && check.status !== 204) {
-                        const state = await check.json();
-                        if (state && !state.is_playing) {
-                            await resumePlayback(token, devId || undefined);
-                        }
-                    }
-                } catch (e) {}
-                setIsResuming(false);
-            }, 600);
+            setTimeout(() => setIsResuming(false), 500);
         } catch (e) {
             console.error("Replay error", e);
             setPlaybackError("No pudimos reproducir en Spotify. Abre la app de Spotify en tu celular o PC.");
@@ -254,29 +241,60 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         setCurrentTrack(nextTrack);
         setTracks(prev => prev.slice(1));
 
-        // Get fresh devices and resolve devId
+        // Get fresh devices and prioritize user's real native Spotify app (iPhone, Mac/PC Spotify app)
         let devId = targetDeviceId;
+        let activeDevice: any = null;
         try {
             const devData = await getAvailableDevices(token);
-            const devs = devData.devices || [];
-            if (devs.length > 0) {
-                const targetStillPresent = devs.find((d: any) => d.id === targetDeviceId);
-                const active = devs.find((d: any) => d.is_active);
-                // Keep target device if still present, else active, else first
-                devId = targetStillPresent?.id || active?.id || devs[0].id;
-                setTargetDeviceId(devId);
+            const rawDevs = devData.devices || [];
+
+            // Native external devices (e.g. Phone, PC/Mac Spotify App, Speaker) - excluding Web Player
+            const nativeDevs = rawDevs.filter((d: any) => !d.name?.includes('234 Drinks') && d.id !== deviceId);
+            const activeNative = nativeDevs.find((d: any) => d.is_active);
+            activeDevice = rawDevs.find((d: any) => d.is_active);
+            const targetStillPresent = rawDevs.find((d: any) => d.id === targetDeviceId);
+
+            if (activeNative) {
+                // If native Spotify App is active/playing, ALWAYS target it!
+                devId = activeNative.id;
+            } else if (targetStillPresent && !targetStillPresent.name?.includes('234 Drinks')) {
+                // Target is an explicit native device
+                devId = targetStillPresent.id;
+            } else if (nativeDevs.length > 0) {
+                // Preferred native device
+                devId = nativeDevs[0].id;
+            } else if (activeDevice) {
+                devId = activeDevice.id;
+            } else if (targetStillPresent) {
+                devId = targetStillPresent.id;
+            } else if (rawDevs.length > 0) {
+                devId = rawDevs[0].id;
             }
-        } catch (e) { }
+
+            if (devId) setTargetDeviceId(devId);
+        } catch (e) {
+            console.warn("Could not refresh devices", e);
+        }
 
         if (!devId) {
             setPlaybackError("No hay ningún dispositivo Spotify conectado. Abre la App de Spotify en tu teléfono o PC y dale Play.");
             return;
         }
 
-        // Attempt 1: Direct Play
+        // If target device is not currently active, transfer playback to it first so it wakes up
+        if (activeDevice && activeDevice.id !== devId) {
+            try {
+                await transferPlayback(token, devId, false);
+                await new Promise(r => setTimeout(r, 400));
+            } catch (e) { }
+        }
+
+        const contextUri = selectedPlaylist?.uri || (selectedPlaylist?.id ? `spotify:playlist:${selectedPlaylist.id}` : undefined);
+
+        // Attempt 1: Play with Context + Offset (Native Spotify handles this with 100% reliability)
         try {
-            console.log(`Spotify: Playing "${nextTrack.name}" (${nextTrack.uri}) on device ${devId}`);
-            const response = await playTrack(token, nextTrack.uri, devId);
+            console.log(`Spotify: Playing "${nextTrack.name}" (${nextTrack.uri}) on device ${devId} with context ${contextUri}`);
+            const response = await playTrack(token, nextTrack.uri, devId, contextUri);
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
@@ -294,30 +312,12 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                 throw new Error(msg);
             }
 
-            // Post-play verification: detect if Spotify loaded track but paused
-            setTimeout(async () => {
-                try {
-                    const checkRes = await fetch('https://api.spotify.com/v1/me/player', {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    if (checkRes.ok && checkRes.status !== 204) {
-                        const status = await checkRes.json();
-                        if (status && status.is_playing === false) {
-                            console.log("Spotify paused after track change, sending resume signal...");
-                            await resumePlayback(token, devId);
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Playback verification error:", err);
-                }
-            }, 700);
-
         } catch (e) {
             console.warn("First play attempt failed, transferring and retrying...", e);
-            // Attempt 2: Transfer then Retry with delay
+            // Attempt 2: Transfer and Retry with direct uris
             try {
-                await transferPlayback(token, devId, true);
-                await new Promise(r => setTimeout(r, 1200));
+                await transferPlayback(token, devId, false);
+                await new Promise(r => setTimeout(r, 600));
 
                 const retryRes = await playTrack(token, nextTrack.uri, devId);
 
@@ -328,11 +328,6 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                     } else {
                         setPlaybackError("Spotify no respondió a tiempo. Abre tu App de Spotify y dale Play a cualquier tema para reactivar Connect.");
                     }
-                } else {
-                    // Send resume signal in case it paused
-                    setTimeout(() => {
-                        resumePlayback(token, devId).catch(() => {});
-                    }, 600);
                 }
             } catch (retryErr) {
                 console.error("Retry playback failed", retryErr);

@@ -171,25 +171,48 @@ export const getUserPlaylists = async (token: string) => {
     return await response.json();
 };
 
-export const playTrack = async (token: string, trackUri: string, deviceId?: string) => {
-    return await fetch(`https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${deviceId}` : ''}`, {
+export const playTrack = async (
+    token: string,
+    trackUri: string,
+    deviceId?: string,
+    contextUri?: string
+) => {
+    const url = `https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${deviceId}` : ''}`;
+
+    // Prefer context + offset for playlists (Spotify native apps handle this with 100% reliability)
+    const body: any = contextUri ? {
+        context_uri: contextUri,
+        offset: { uri: trackUri },
+        position_ms: 0
+    } : {
+        uris: [trackUri],
+        position_ms: 0
+    };
+
+    const response = await fetch(url, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-            uris: [trackUri]
-        })
+        body: JSON.stringify(body)
     });
-};
 
-export const resumePlayback = async (token: string, deviceId?: string) => {
-    return await fetch(`https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${deviceId}` : ''}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    });
+    // If context_uri fails, fallback to direct uris array
+    if (!response.ok && contextUri) {
+        return await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                uris: [trackUri],
+                position_ms: 0
+            })
+        });
+    }
+
+    return response;
 };
 
