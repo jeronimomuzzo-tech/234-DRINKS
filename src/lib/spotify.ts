@@ -123,7 +123,7 @@ export const refreshToken = async (storedRefreshToken: string) => {
 }
 
 export const fetchPlaylistTracks = async (token: string, playlistId: string) => {
-    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50`, {
+    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&market=from_token`, {
         headers: { Authorization: `Bearer ${token}` }
     });
     return await response.json();
@@ -143,7 +143,7 @@ export const getPlaylist = async (token: string, playlistId: string) => {
     return await response.json();
 };
 
-export const transferPlayback = async (token: string, deviceId: string) => {
+export const transferPlayback = async (token: string, deviceId: string, play = false) => {
     return await fetch('https://api.spotify.com/v1/me/player', {
         method: 'PUT',
         headers: {
@@ -152,7 +152,7 @@ export const transferPlayback = async (token: string, deviceId: string) => {
         },
         body: JSON.stringify({
             device_ids: [deviceId],
-            play: true
+            play: play
         })
     });
 };
@@ -170,3 +170,26 @@ export const getUserPlaylists = async (token: string) => {
     });
     return await response.json();
 };
+
+export const playTrack = async (token: string, trackUri: string, deviceId?: string) => {
+    return await fetch(`https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${deviceId}` : ''}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            uris: [trackUri]
+        })
+    });
+};
+
+export const resumePlayback = async (token: string, deviceId?: string) => {
+    return await fetch(`https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${deviceId}` : ''}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+};
+

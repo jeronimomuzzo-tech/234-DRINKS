@@ -252,6 +252,7 @@ export const SpotifyProvider = ({ children }: { children: React.ReactNode }) => 
                 refreshTokenNow();
             });
             playerInstance.addListener('account_error', ({ message }: any) => { console.error("Account Error:", message); });
+            playerInstance.addListener('playback_error', ({ message }: any) => { console.error("Playback Error:", message); });
 
             playerInstance.connect();
             setPlayer(playerInstance);

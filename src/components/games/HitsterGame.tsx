@@ -6,7 +6,9 @@ import {
     transferPlayback,
     getAvailableDevices,
     getUserPlaylists,
-    openSpotifyApp
+    openSpotifyApp,
+    playTrack,
+    resumePlayback
 } from '../../lib/spotify';
 import {
     Play,
@@ -52,7 +54,7 @@ interface StealBet {
 }
 
 export function HitsterGame({ onExit }: { onExit: () => void }) {
-    const { token, deviceId, login, refreshTokenNow } = useSpotify();
+    const { token, player, deviceId, login, refreshTokenNow } = useSpotify();
 
     // Game lifecycle
     const [gameState, setGameState] = useState<
@@ -85,6 +87,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
     const [targetDeviceId, setTargetDeviceId] = useState<string | null>(null);
     const [playbackError, setPlaybackError] = useState<string | null>(null);
     const [isTransferring, setIsTransferring] = useState(false);
+    const [isResuming, setIsResuming] = useState(false);
 
     // Teams
     const [teamCount, setTeamCount] = useState<number>(2);
@@ -99,33 +102,51 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         if (!token) return;
         try {
             const data = await getAvailableDevices(token);
-            let devices = data.devices || [];
+            let rawDevices = data.devices || [];
 
-            // Add local web player on desktop if ready
-            if (deviceId && !devices.find((d: any) => d.id === deviceId)) {
-                devices.push({
+            // Identify Web Player vs Native Apps
+            const formattedDevices = rawDevices.map((d: any) => ({
+                ...d,
+                isWebPlayer: d.id === deviceId || d.name?.includes('234 Drinks')
+            }));
+
+            // If local web player is ready and not returned by API yet, add it
+            if (deviceId && !formattedDevices.find((d: any) => d.id === deviceId)) {
+                formattedDevices.push({
                     id: deviceId,
                     name: '🔊 Este Navegador (Web)',
                     type: 'Computer',
-                    is_active: true
+                    is_active: false,
+                    isWebPlayer: true
                 });
             }
 
-            setAvailableDevices(devices);
+            setAvailableDevices(formattedDevices);
 
-            // Auto-select active device or fallback to first
-            if (devices.length > 0) {
-                const active = devices.find((d: any) => d.is_active);
-                if (autoSelect || !targetDeviceId) {
-                    if (active) setTargetDeviceId(active.id);
-                    else if (deviceId) setTargetDeviceId(deviceId);
-                    else setTargetDeviceId(devices[0].id);
-                } else {
-                    // If targetDeviceId is not in fresh devices, update to active
-                    const stillExists = devices.some((d: any) => d.id === targetDeviceId);
-                    if (!stillExists) {
-                        setTargetDeviceId(active?.id || devices[0].id);
-                    }
+            // Native external devices (e.g. Phone, PC Spotify App, Speaker)
+            const nativeDevices = formattedDevices.filter((d: any) => !d.isWebPlayer);
+            const activeNative = nativeDevices.find((d: any) => d.is_active);
+            const activeAny = formattedDevices.find((d: any) => d.is_active);
+
+            // PRIORITY ORDER FOR SELECTION:
+            // 1. If user previously chose a device and it still exists, keep it!
+            // 2. Active Native device (e.g. user currently listening in Spotify phone/PC app)
+            // 3. First available Native device (user's real Spotify app)
+            // 4. Any active device / first device
+            if (autoSelect || !targetDeviceId) {
+                if (activeNative) {
+                    setTargetDeviceId(activeNative.id);
+                } else if (nativeDevices.length > 0) {
+                    setTargetDeviceId(nativeDevices[0].id);
+                } else if (activeAny) {
+                    setTargetDeviceId(activeAny.id);
+                } else if (formattedDevices.length > 0) {
+                    setTargetDeviceId(formattedDevices[0].id);
+                }
+            } else {
+                const stillExists = formattedDevices.some((d: any) => d.id === targetDeviceId);
+                if (!stillExists && formattedDevices.length > 0) {
+                    setTargetDeviceId(activeNative?.id || nativeDevices[0]?.id || formattedDevices[0].id);
                 }
             }
         } catch (e) {
@@ -153,15 +174,55 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         setIsTransferring(true);
         setPlaybackError(null);
         try {
-            await transferPlayback(token, devId);
+            await transferPlayback(token, devId, false);
             setTargetDeviceId(devId);
             setTimeout(() => {
                 fetchDevices(false);
                 setIsTransferring(false);
-            }, 1200);
+            }, 800);
         } catch (e: any) {
             console.error("Force transfer error", e);
             setIsTransferring(false);
+        }
+    };
+
+    // --- REPLAY / FORCE RESUME HELPER ---
+    const replayCurrentTrack = async () => {
+        if (!token || !currentTrack) return;
+        setIsResuming(true);
+        setPlaybackError(null);
+
+        // Unlock web audio element if available
+        if (player && typeof player.activateElement === 'function') {
+            await player.activateElement().catch(() => {});
+        }
+
+        const devId = targetDeviceId || deviceId;
+        try {
+            const res = await playTrack(token, currentTrack.uri, devId || undefined);
+            if (!res.ok) {
+                // If play with URI failed, send plain resume
+                await resumePlayback(token, devId || undefined);
+            }
+            setTimeout(async () => {
+                // Double check if playing
+                try {
+                    const check = await fetch('https://api.spotify.com/v1/me/player', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (check.ok && check.status !== 204) {
+                        const state = await check.json();
+                        if (state && !state.is_playing) {
+                            await resumePlayback(token, devId || undefined);
+                        }
+                    }
+                } catch (e) {}
+                setIsResuming(false);
+            }, 600);
+        } catch (e) {
+            console.error("Replay error", e);
+            setPlaybackError("No pudimos reproducir en Spotify. Abre la app de Spotify en tu celular o PC.");
+            setIsResuming(false);
         }
     };
 
@@ -170,6 +231,15 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         if (!token || tracks.length === 0) {
             console.error("Cannot play: missing token or tracks");
             return;
+        }
+
+        // Activate browser audio element if using Web Playback SDK
+        if (player && typeof player.activateElement === 'function') {
+            try {
+                await player.activateElement();
+            } catch (e) {
+                console.warn("player.activateElement error:", e);
+            }
         }
 
         setGameState('playing');
@@ -184,14 +254,16 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         setCurrentTrack(nextTrack);
         setTracks(prev => prev.slice(1));
 
-        // Ensure we have a fresh target device
+        // Get fresh devices and resolve devId
         let devId = targetDeviceId;
         try {
             const devData = await getAvailableDevices(token);
             const devs = devData.devices || [];
             if (devs.length > 0) {
-                const active = devs.find((d: any) => d.is_active) || devs.find((d: any) => d.id === targetDeviceId) || devs[0];
-                devId = active.id;
+                const targetStillPresent = devs.find((d: any) => d.id === targetDeviceId);
+                const active = devs.find((d: any) => d.is_active);
+                // Keep target device if still present, else active, else first
+                devId = targetStillPresent?.id || active?.id || devs[0].id;
                 setTargetDeviceId(devId);
             }
         } catch (e) { }
@@ -203,24 +275,15 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
 
         // Attempt 1: Direct Play
         try {
-            const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${devId}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    uris: [nextTrack.uri],
-                    position_ms: 0
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-            });
+            console.log(`Spotify: Playing "${nextTrack.name}" (${nextTrack.uri}) on device ${devId}`);
+            const response = await playTrack(token, nextTrack.uri, devId);
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
                 const msg = err.error?.message || response.statusText;
 
                 if (response.status === 403) {
-                    setPlaybackError("⚠️ Spotify requiere suscripción Premium para controlar la reproducción de forma remota. Si tienes cuenta Free, el DJ puede poner el tema buscando el nombre al final.");
+                    setPlaybackError("⚠️ Spotify requiere suscripción Premium para controlar la reproducción de forma remota.");
                     return;
                 }
 
@@ -228,24 +291,35 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                     await refreshTokenNow();
                 }
 
-                // If device asleep or offline (404), transfer and retry
                 throw new Error(msg);
             }
+
+            // Post-play verification: detect if Spotify loaded track but paused
+            setTimeout(async () => {
+                try {
+                    const checkRes = await fetch('https://api.spotify.com/v1/me/player', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (checkRes.ok && checkRes.status !== 204) {
+                        const status = await checkRes.json();
+                        if (status && status.is_playing === false) {
+                            console.log("Spotify paused after track change, sending resume signal...");
+                            await resumePlayback(token, devId);
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Playback verification error:", err);
+                }
+            }, 700);
+
         } catch (e) {
             console.warn("First play attempt failed, transferring and retrying...", e);
-            // Attempt 2: Transfer then Retry with 1500ms delay
+            // Attempt 2: Transfer then Retry with delay
             try {
-                await transferPlayback(token, devId);
-                await new Promise(r => setTimeout(r, 1500));
+                await transferPlayback(token, devId, true);
+                await new Promise(r => setTimeout(r, 1200));
 
-                const retryRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${devId}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ uris: [nextTrack.uri] }),
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                });
+                const retryRes = await playTrack(token, nextTrack.uri, devId);
 
                 if (!retryRes.ok) {
                     const err = await retryRes.json().catch(() => ({}));
@@ -254,6 +328,11 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                     } else {
                         setPlaybackError("Spotify no respondió a tiempo. Abre tu App de Spotify y dale Play a cualquier tema para reactivar Connect.");
                     }
+                } else {
+                    // Send resume signal in case it paused
+                    setTimeout(() => {
+                        resumePlayback(token, devId).catch(() => {});
+                    }, 600);
                 }
             } catch (retryErr) {
                 console.error("Retry playback failed", retryErr);
@@ -344,7 +423,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         if (data.items && data.items.length > 0) {
             const shuffled = data.items
                 .map((item: any) => item.track)
-                .filter((t: any) => t && t.uri && t.album && t.album.release_date)
+                .filter((t: any) => t && t.uri && t.album && t.album.release_date && t.is_playable !== false)
                 .sort(() => Math.random() - 0.5);
 
             setTracks(shuffled);
@@ -376,14 +455,9 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         setLoading(false);
     };
 
-    const startGame = async () => {
-        if (token && targetDeviceId) {
-            try {
-                await transferPlayback(token, targetDeviceId);
-            } catch (e) {
-                console.error("Transfer failed on start", e);
-            }
-        }
+    const startGame = () => {
+        // Do not interrupt or pause Spotify playback here.
+        // Let background music keep playing until the first team hits "PLAY ▶️".
         setGameState('turn-start');
     };
 
@@ -675,7 +749,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                 </div>
             </div>
 
-            <div className="space-y-2 max-h-36 overflow-y-auto no-scrollbar">
+            <div className="space-y-2 max-h-44 overflow-y-auto no-scrollbar">
                 {availableDevices.map(device => {
                     const isSelected = targetDeviceId === device.id;
                     return (
@@ -689,10 +763,26 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                         >
                             {getDeviceIcon(device.type)}
                             <div className="flex-1 text-left min-w-0">
-                                <div className="font-bold text-xs truncate">{device.name}</div>
-                                {device.is_active && <div className="text-[9px] text-green-200 uppercase tracking-wider">Activo ahora</div>}
+                                <div className="font-bold text-xs truncate flex items-center gap-1.5">
+                                    <span>{device.name}</span>
+                                    {device.is_active && (
+                                        <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
+                                    )}
+                                </div>
+                                <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5">
+                                    {device.is_active ? (
+                                        <span className="text-green-200 font-bold uppercase tracking-wider text-[9px]">Sonando ahora 🟢</span>
+                                    ) : (
+                                        <span>Conectado</span>
+                                    )}
+                                    {!device.isWebPlayer ? (
+                                        <span className="bg-white/15 px-1.5 py-0.5 rounded text-[9px] font-semibold text-white">App Spotify 📱/💻</span>
+                                    ) : (
+                                        <span className="bg-white/10 px-1.5 py-0.5 rounded text-[9px] text-gray-400">Web</span>
+                                    )}
+                                </div>
                             </div>
-                            {isSelected && <Check size={14} className="text-white" />}
+                            {isSelected && <Check size={16} className="text-white flex-shrink-0" />}
                         </button>
                     );
                 })}
@@ -1094,6 +1184,24 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                             <p className="text-gray-400 text-xs mt-2 font-medium">
                                 Escuchando pista... ¿En qué posición de tu línea de tiempo va?
                             </p>
+
+                            <div className="flex items-center gap-2 mt-2.5">
+                                <button
+                                    onClick={replayCurrentTrack}
+                                    disabled={isResuming}
+                                    className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 font-bold text-xs rounded-xl border border-green-500/30 flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+                                    title="Volver a enviar señal de reproducción a Spotify"
+                                >
+                                    <Volume2 size={13} className={isResuming ? 'animate-spin' : ''} />
+                                    <span>{isResuming ? 'Reconectando...' : '¿No suena? Forzar Play ▶️'}</span>
+                                </button>
+                                <button
+                                    onClick={openSpotifyApp}
+                                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-xs rounded-xl border border-white/10 flex items-center gap-1 transition-all"
+                                >
+                                    Abrir App
+                                </button>
+                            </div>
                         </div>
 
                         {/* Interactive Timeline Slots */}
