@@ -69,6 +69,8 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
     const [isSearching, setIsSearching] = useState(false);
     const [myPlaylists, setMyPlaylists] = useState<any[]>([]);
     const [selectedPlaylist, setSelectedPlaylist] = useState<any>(null);
+    const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+    const [playlistError, setPlaylistError] = useState<string | null>(null);
 
     // Gameplay & Mechanics
     const [difficulty, setDifficulty] = useState<Difficulty>('normal');
@@ -351,22 +353,43 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
     };
 
     // --- PLAYLIST LOADING & SEARCH ---
-    useEffect(() => {
+    const loadMyPlaylists = async () => {
         if (!token) return;
-
-        const loadMyPlaylists = async () => {
-            try {
-                const data = await getUserPlaylists(token);
-                if (data.items) {
-                    setMyPlaylists(data.items);
+        setLoadingPlaylists(true);
+        setPlaylistError(null);
+        try {
+            const data = await getUserPlaylists(token);
+            if (data?.items) {
+                setMyPlaylists(data.items);
+                if (!searchQuery.trim()) {
                     setSearchResults(data.items);
                 }
-            } catch (e) {
-                console.error("Error loading user playlists", e);
+            } else if (data?.error) {
+                console.warn("Spotify: Playlist load error", data.error);
+                // Attempt refresh if token was expired
+                const freshToken = await refreshTokenNow();
+                if (freshToken) {
+                    const retry = await getUserPlaylists(freshToken);
+                    if (retry?.items) {
+                        setMyPlaylists(retry.items);
+                        if (!searchQuery.trim()) setSearchResults(retry.items);
+                        return;
+                    }
+                }
+                setPlaylistError("No se pudieron cargar tus playlists. Puedes buscar música arriba o re-conectar tu cuenta.");
             }
-        };
+        } catch (e) {
+            console.error("Error loading user playlists", e);
+            setPlaylistError("Error de conexión con Spotify.");
+        } finally {
+            setLoadingPlaylists(false);
+        }
+    };
 
-        loadMyPlaylists();
+    useEffect(() => {
+        if (token) {
+            loadMyPlaylists();
+        }
     }, [token]);
 
     useEffect(() => {
@@ -380,6 +403,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
             }
 
             setIsSearching(true);
+            setPlaylistError(null);
             try {
                 let globalResults: any[] = [];
                 const globalData = await searchPlaylists(token, q);
@@ -390,7 +414,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                 let localMatches: any[] = [];
                 if (myPlaylists.length > 0) {
                     localMatches = myPlaylists.filter(p =>
-                        p.name.toLowerCase().includes(q.toLowerCase())
+                        p.name?.toLowerCase().includes(q.toLowerCase())
                     );
                 }
 
@@ -663,14 +687,29 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
     // 3. Playlist Select Screen
     const renderPlaylistSelect = () => (
         <div className="flex flex-col h-full p-6 animate-in fade-in">
-            <h2 className="text-3xl font-black mb-4 text-center">Elige tu Música 🎵</h2>
+            <div className="flex items-center justify-between mb-4">
+                <button
+                    onClick={() => setGameState('team-select')}
+                    className="text-xs text-gray-400 hover:text-white flex items-center gap-1 font-bold"
+                >
+                    ← Volver
+                </button>
+                <h2 className="text-2xl font-black text-center text-white">Elige tu Música 🎵</h2>
+                <button
+                    onClick={loadMyPlaylists}
+                    className="p-2 text-gray-400 hover:text-green-400 rounded-full hover:bg-white/5 transition-colors"
+                    title="Recargar playlists"
+                >
+                    <RefreshCw size={16} className={loadingPlaylists ? 'animate-spin text-green-400' : ''} />
+                </button>
+            </div>
 
             <div className="relative mb-4">
                 <Search className="absolute left-4 top-4 text-gray-400" />
                 <input
                     type="text"
                     placeholder="Buscar playlists, géneros o artistas..."
-                    className="w-full bg-zinc-900 text-white pl-12 pr-4 py-3.5 rounded-2xl border border-white/10 focus:border-green-500 focus:outline-none text-base"
+                    className="w-full bg-zinc-900 text-white pl-12 pr-4 py-3.5 rounded-2xl border border-white/10 focus:border-green-500 focus:outline-none text-base font-semibold"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -682,12 +721,35 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                     <button
                         key={tag}
                         onClick={() => setSearchQuery(tag === 'Mis Listas' ? '' : tag)}
-                        className="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-semibold whitespace-nowrap border border-white/5 transition-colors"
+                        className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-colors ${(tag === 'Mis Listas' && !searchQuery) || searchQuery === tag
+                            ? 'bg-green-600 text-white border-green-500'
+                            : 'bg-white/10 hover:bg-white/20 text-gray-300 border-white/5'
+                            }`}
                     >
                         {tag}
                     </button>
                 ))}
             </div>
+
+            {playlistError && (
+                <div className="bg-amber-950/40 border border-amber-500/40 p-3.5 rounded-2xl text-center space-y-2 mb-3">
+                    <p className="text-xs text-amber-200">{playlistError}</p>
+                    <div className="flex gap-2 justify-center">
+                        <button
+                            onClick={loadMyPlaylists}
+                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-colors"
+                        >
+                            <RefreshCw size={12} /> Reintentar
+                        </button>
+                        <button
+                            onClick={() => login('hitster')}
+                            className="px-3 py-1.5 bg-[#1DB954] hover:bg-green-400 text-black rounded-xl text-xs font-bold flex items-center gap-1 transition-transform active:scale-95"
+                        >
+                            Re-conectar Spotify
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2 flex justify-between items-center">
                 {searchQuery ? 'Resultados de Búsqueda' : 'Tus Playlists Guardadas'}
@@ -695,26 +757,59 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
             </h3>
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar">
-                {searchResults.map(playlist => {
-                    const imageUrl = playlist.images && playlist.images.length > 0
-                        ? playlist.images[0].url
-                        : 'https://placehold.co/64x64/22c55e/ffffff?text=🎵';
+                {loadingPlaylists && searchResults.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-12 text-center space-y-3">
+                        <div className="w-10 h-10 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin mx-auto" />
+                        <p className="text-sm font-semibold text-gray-400">Cargando tus playlists de Spotify...</p>
+                    </div>
+                ) : searchResults.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-8 text-center bg-zinc-900/40 rounded-3xl border border-white/5 space-y-3 mt-4">
+                        <ListMusic size={40} className="text-gray-600 mb-1" />
+                        <h4 className="text-base font-bold text-white">
+                            {searchQuery ? 'No encontramos playlists con ese nombre' : 'No encontramos playlists guardadas'}
+                        </h4>
+                        <p className="text-xs text-gray-400 max-w-xs">
+                            {searchQuery
+                                ? 'Prueba con otro género o artista (ej: Reggaeton, Cumbia, Rock).'
+                                : 'Si guardas playlists en tu cuenta de Spotify aparecerán aquí. También puedes buscar cualquier música arriba o re-conectar.'}
+                        </p>
+                        <div className="flex gap-2 pt-2">
+                            <button
+                                onClick={loadMyPlaylists}
+                                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors"
+                            >
+                                <RefreshCw size={13} /> Recargar
+                            </button>
+                            <button
+                                onClick={() => login('hitster')}
+                                className="px-4 py-2 bg-[#1DB954] hover:bg-green-400 text-black text-xs font-bold rounded-xl flex items-center gap-1.5 shadow transition-transform active:scale-95"
+                            >
+                                Re-conectar Spotify
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    searchResults.map(playlist => {
+                        const imageUrl = playlist.images && playlist.images.length > 0
+                            ? playlist.images[0].url
+                            : 'https://placehold.co/64x64/22c55e/ffffff?text=🎵';
 
-                    return (
-                        <button
-                            key={playlist.id}
-                            onClick={() => handlePlaylistSelect(playlist)}
-                            className="w-full bg-zinc-900/60 p-3.5 rounded-2xl flex items-center gap-4 hover:bg-zinc-800 border border-white/5 hover:border-white/20 transition-all text-left group active:scale-[0.98]"
-                        >
-                            <img src={imageUrl} className="w-14 h-14 rounded-xl shadow-md group-hover:scale-105 transition-transform object-cover bg-zinc-800 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-bold truncate text-base text-white">{playlist.name}</h3>
-                                <p className="text-gray-400 text-xs">{playlist.tracks?.total || 0} canciones</p>
-                            </div>
-                            <ListMusic className="text-gray-500 group-hover:text-green-400 flex-shrink-0" size={20} />
-                        </button>
-                    );
-                })}
+                        return (
+                            <button
+                                key={playlist.id}
+                                onClick={() => handlePlaylistSelect(playlist)}
+                                className="w-full bg-zinc-900/60 p-3.5 rounded-2xl flex items-center gap-4 hover:bg-zinc-800 border border-white/5 hover:border-white/20 transition-all text-left group active:scale-[0.98]"
+                            >
+                                <img src={imageUrl} className="w-14 h-14 rounded-xl shadow-md group-hover:scale-105 transition-transform object-cover bg-zinc-800 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold truncate text-base text-white">{playlist.name}</h3>
+                                    <p className="text-gray-400 text-xs">{playlist.tracks?.total || 0} canciones</p>
+                                </div>
+                                <ListMusic className="text-gray-500 group-hover:text-green-400 flex-shrink-0" size={20} />
+                            </button>
+                        );
+                    })
+                )}
             </div>
         </div>
     );

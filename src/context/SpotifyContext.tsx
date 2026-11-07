@@ -32,6 +32,17 @@ export const SpotifyProvider = ({ children }: { children: React.ReactNode }) => 
     const [isPaused, setPaused] = useState(false);
     const [isActive, setActive] = useState(false);
 
+    const logout = useCallback(() => {
+        setToken(null);
+        setPlayer(null);
+        setDeviceId(null);
+        localStorage.removeItem('spotify_access_token');
+        localStorage.removeItem('spotify_refresh_token');
+        localStorage.removeItem('spotify_token_expires_at');
+        localStorage.removeItem('spotify_code_verifier');
+        localStorage.removeItem('spotify_redirect_target');
+    }, []);
+
     // Refresh token helper
     const refreshTokenNow = useCallback(async (): Promise<string | null> => {
         const storedRefreshToken = localStorage.getItem('spotify_refresh_token');
@@ -52,18 +63,26 @@ export const SpotifyProvider = ({ children }: { children: React.ReactNode }) => 
                 localStorage.setItem('spotify_token_expires_at', String(Date.now() + expiresInMs));
                 setToken(data.access_token);
                 return data.access_token;
+            } else if (data?.error === 'invalid_grant') {
+                console.warn("Spotify: Refresh token expired or revoked, logging out");
+                logout();
             }
         } catch (e) {
             console.error("Spotify: Token refresh failed", e);
         }
         return null;
-    }, []);
+    }, [logout]);
 
-    // Silent restore on mount if refresh token is present
+    // Silent restore on mount if refresh token is present and token is expired or missing
     useEffect(() => {
         const storedToken = localStorage.getItem('spotify_access_token');
         const storedRefreshToken = localStorage.getItem('spotify_refresh_token');
-        if (!storedToken && storedRefreshToken) {
+        const expiresAt = Number(localStorage.getItem('spotify_token_expires_at') || '0');
+
+        const isExpired = !storedToken || !expiresAt || Date.now() >= (expiresAt - 60000);
+
+        if (storedRefreshToken && isExpired) {
+            console.log("Spotify: Startup check detected expired or missing token. Refreshing immediately...");
             refreshTokenNow();
         }
     }, [refreshTokenNow]);
@@ -173,16 +192,34 @@ export const SpotifyProvider = ({ children }: { children: React.ReactNode }) => 
             }
         };
 
-        const handleFocus = () => {
+        const checkExpiryAndRefresh = () => {
             const stored = localStorage.getItem('spotify_access_token');
             if (stored && stored !== token) {
                 updateTokenState(stored);
             }
-            // Check if token expired
+            const storedRefreshToken = localStorage.getItem('spotify_refresh_token');
             const expiresAt = Number(localStorage.getItem('spotify_token_expires_at') || '0');
-            if (expiresAt && Date.now() > expiresAt - 60000) {
+            if (storedRefreshToken && (!expiresAt || Date.now() >= expiresAt - 60000)) {
+                console.log("Spotify: Visibility/Focus detected expired token, refreshing...");
                 refreshTokenNow();
             }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                checkExpiryAndRefresh();
+            }
+        };
+
+        const handleTokenRefreshed = (e: any) => {
+            if (e.detail) {
+                console.log("Spotify: Token refreshed externally, updating state...");
+                setToken(e.detail);
+            }
+        };
+
+        const handleCustomLogout = () => {
+            logout();
         };
 
         // Scheduled check for auto-refresh every 60s
@@ -195,16 +232,22 @@ export const SpotifyProvider = ({ children }: { children: React.ReactNode }) => 
 
         window.addEventListener('message', handlePostMessage);
         window.addEventListener('storage', handleStorage);
-        window.addEventListener('focus', handleFocus);
+        window.addEventListener('focus', checkExpiryAndRefresh);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('spotify_token_refreshed', handleTokenRefreshed);
+        window.addEventListener('spotify_logout', handleCustomLogout);
 
         return () => {
             clearInterval(refreshTimer);
             window.removeEventListener('message', handlePostMessage);
             window.removeEventListener('storage', handleStorage);
-            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('focus', checkExpiryAndRefresh);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('spotify_token_refreshed', handleTokenRefreshed);
+            window.removeEventListener('spotify_logout', handleCustomLogout);
             authChannel.close();
         };
-    }, [token, refreshTokenNow]);
+    }, [token, refreshTokenNow, logout]);
 
     // Load Web Playback SDK for desktop browsers
     useEffect(() => {
@@ -264,17 +307,6 @@ export const SpotifyProvider = ({ children }: { children: React.ReactNode }) => 
     }, [token, refreshTokenNow]);
 
     const login = (target?: string) => loginWithSpotify(target);
-
-    const logout = () => {
-        setToken(null);
-        setPlayer(null);
-        setDeviceId(null);
-        localStorage.removeItem('spotify_access_token');
-        localStorage.removeItem('spotify_refresh_token');
-        localStorage.removeItem('spotify_token_expires_at');
-        localStorage.removeItem('spotify_code_verifier');
-        localStorage.removeItem('spotify_redirect_target');
-    };
 
     return (
         <SpotifyContext.Provider value={{ token, player, deviceId, isPaused, isActive, login, logout, refreshTokenNow }}>
