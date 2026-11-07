@@ -157,6 +157,7 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
     // Modal Details for a Rival
     const [selectedRival, setSelectedRival] = useState<RivalPre | null>(null);
     const [copiedRoomCode, setCopiedRoomCode] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // --- HELPER: In-App Toast & Audio ---
     const showNotice = (title: string, body: string) => {
@@ -748,7 +749,6 @@ export function PreVsPreGame({ onExit }: PreVsPreGameProps) {
 
     // --- VIEW: JOIN / VER RANKING Y RETAR ---
     const renderJoin = () => {
-        const [searchQuery, setSearchQuery] = useState('');
         const filteredRivals = rivals.filter(r =>
             r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             r.location.toLowerCase().includes(searchQuery.toLowerCase())
