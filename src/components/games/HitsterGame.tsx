@@ -7,7 +7,11 @@ import {
     getAvailableDevices,
     getUserPlaylists,
     openSpotifyApp,
-    playTrack
+    playTrack,
+    setShuffle,
+    getCurrentlyPlaying,
+    cleanTrackTitle,
+    resolveOriginalReleaseYear
 } from '../../lib/spotify';
 import {
     Play,
@@ -80,6 +84,8 @@ const getTeamColor = (t: Team) => {
     }
 };
 
+const getTrackKey = (t: any) => `${(cleanTrackTitle(t?.name) || '').toLowerCase()}:::${(t?.artists?.[0]?.name || '').toLowerCase()}`;
+
 export function HitsterGame({ onExit }: { onExit: () => void }) {
     const { token, player, deviceId, login, logout, refreshTokenNow } = useSpotify();
 
@@ -91,6 +97,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
     // Playlist & Tracks
     const [tracks, setTracks] = useState<any[]>([]);
     const [currentTrack, setCurrentTrack] = useState<any>(null);
+    const [playedTrackKeys, setPlayedTrackKeys] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -227,13 +234,12 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         }
 
         const devId = targetDeviceId || deviceId;
-        const contextUri = selectedPlaylist?.uri || (selectedPlaylist?.id ? `spotify:playlist:${selectedPlaylist.id}` : undefined);
 
         try {
-            const res = await playTrack(token, currentTrack.uri, devId || undefined, contextUri);
+            await setShuffle(token, false, devId || undefined).catch(() => {});
+            const res = await playTrack(token, currentTrack.uri, devId || undefined);
             if (!res.ok) {
-                // Fallback direct play
-                await playTrack(token, currentTrack.uri, devId || undefined);
+                console.warn("Replay failed");
             }
             setTimeout(() => setIsResuming(false), 500);
         } catch (e) {
@@ -267,9 +273,38 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
         setBonusDrinks(false);
         setPlaybackError(null);
 
-        const nextTrack = tracks[0];
-        setCurrentTrack(nextTrack);
-        setTracks(prev => prev.slice(1));
+        // Filter out any track already played in this game session to guarantee no repeats
+        let nextTrackIndex = tracks.findIndex(t => {
+            const key = getTrackKey(t);
+            return !playedTrackKeys.has(key) && !playedTrackKeys.has(t.id);
+        });
+
+        if (nextTrackIndex === -1) {
+            nextTrackIndex = 0;
+        }
+
+        const candidateTrack = tracks[nextTrackIndex];
+        const remainingTracks = tracks.filter((_, idx) => idx !== nextTrackIndex);
+        setTracks(remainingTracks);
+
+        // Resolve original studio release year & clean title to eliminate compilation/remaster discrepancies
+        const origYear = await resolveOriginalReleaseYear(candidateTrack, token);
+        const preparedTrack = {
+            ...candidateTrack,
+            displayName: cleanTrackTitle(candidateTrack.name),
+            album: {
+                ...candidateTrack.album,
+                release_date: `${origYear}-01-01`
+            }
+        };
+
+        setCurrentTrack(preparedTrack);
+        setPlayedTrackKeys(prev => {
+            const updated = new Set(prev);
+            updated.add(getTrackKey(preparedTrack));
+            updated.add(preparedTrack.id);
+            return updated;
+        });
 
         // Get fresh devices and prioritize user's real native Spotify app (iPhone, Mac/PC Spotify app)
         let devId = targetDeviceId;
@@ -319,12 +354,13 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
             } catch (e) { }
         }
 
-        const contextUri = selectedPlaylist?.uri || (selectedPlaylist?.id ? `spotify:playlist:${selectedPlaylist.id}` : undefined);
+        // Turn off shuffle so Spotify doesn't randomly jump to other songs
+        await setShuffle(token, false, devId).catch(() => {});
 
-        // Attempt 1: Play with Context + Offset (Native Spotify handles this with 100% reliability)
+        // Direct Play: Play ONLY this exact single track (no context_uri)
         try {
-            console.log(`Spotify: Playing "${nextTrack.name}" (${nextTrack.uri}) on device ${devId} with context ${contextUri}`);
-            const response = await playTrack(token, nextTrack.uri, devId, contextUri);
+            console.log(`Spotify: Playing exact track "${preparedTrack.displayName}" (${preparedTrack.uri}) on device ${devId}`);
+            const response = await playTrack(token, preparedTrack.uri, devId);
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
@@ -342,6 +378,41 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                 throw new Error(msg);
             }
 
+            // Verification check: after a short delay, check what Spotify is actually playing
+            setTimeout(async () => {
+                try {
+                    const currently = await getCurrentlyPlaying(token);
+                    if (currently?.item && currently.is_playing) {
+                        const actualItem = currently.item;
+                        const actualKey = getTrackKey(actualItem);
+                        const expectedKey = getTrackKey(preparedTrack);
+
+                        // If Spotify substituted or linked a different version or track
+                        if (actualItem.id !== preparedTrack.id && actualKey !== expectedKey) {
+                            console.log(`Spotify playing different track: "${actualItem.name}" vs expected "${preparedTrack.displayName}"`);
+                            const actualYear = await resolveOriginalReleaseYear(actualItem, token);
+                            const syncedTrack = {
+                                ...actualItem,
+                                displayName: cleanTrackTitle(actualItem.name),
+                                album: {
+                                    ...actualItem.album,
+                                    release_date: `${actualYear}-01-01`
+                                }
+                            };
+                            setCurrentTrack(syncedTrack);
+                            setPlayedTrackKeys(prev => {
+                                const nextSet = new Set(prev);
+                                nextSet.add(getTrackKey(syncedTrack));
+                                nextSet.add(syncedTrack.id);
+                                return nextSet;
+                            });
+                        }
+                    }
+                } catch (verifyErr) {
+                    // Ignore non-critical verification error
+                }
+            }, 800);
+
         } catch (e) {
             console.warn("First play attempt failed, transferring and retrying...", e);
             // Attempt 2: Transfer and Retry with direct uris
@@ -349,7 +420,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                 await transferPlayback(token, devId, false);
                 await new Promise(r => setTimeout(r, 600));
 
-                const retryRes = await playTrack(token, nextTrack.uri, devId);
+                const retryRes = await playTrack(token, preparedTrack.uri, devId);
 
                 if (!retryRes.ok) {
                     const err = await retryRes.json().catch(() => ({}));
@@ -482,41 +553,93 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
     const handlePlaylistSelect = async (playlist: any) => {
         setLoading(true);
         setSelectedPlaylist(playlist);
-        const data = await fetchPlaylistTracks(token!, playlist.id);
 
-        if (data.items && data.items.length > 0) {
-            const shuffled = data.items
-                .map((item: any) => item.track)
-                .filter((t: any) => t && t.uri && t.album && t.album.release_date && t.is_playable !== false)
-                .sort(() => Math.random() - 0.5);
+        try {
+            // Fetch first batch (up to 100 tracks)
+            const firstBatch = await fetchPlaylistTracks(token!, playlist.id, 100, 0);
+            let rawItems: any[] = firstBatch?.items || [];
 
-            setTracks(shuffled);
-
-            // Setup Initial Timelines for active teams
-            if (shuffled.length >= teamCount) {
-                const newTeams = { ...teams };
-                Object.keys(newTeams).forEach((teamId, index) => {
-                    newTeams[teamId as Team].timeline = [shuffled[index]];
-                    newTeams[teamId as Team].score = 0;
-                });
-                setTeams(newTeams);
-                setTracks(prev => prev.slice(teamCount));
-            } else {
-                const base = shuffled[0] || null;
-                const newTeams = { ...teams };
-                Object.keys(newTeams).forEach((teamId) => {
-                    newTeams[teamId as Team].timeline = base ? [base] : [];
-                });
-                setTeams(newTeams);
-                setTracks(prev => prev.slice(1));
+            // If playlist has more than 100 tracks, fetch next page to provide rich pool
+            if (firstBatch?.total && firstBatch.total > 100 && rawItems.length === 100) {
+                try {
+                    const secondBatch = await fetchPlaylistTracks(token!, playlist.id, 100, 100);
+                    if (secondBatch?.items) {
+                        rawItems = rawItems.concat(secondBatch.items);
+                    }
+                } catch (batchErr) {
+                    console.warn("Could not fetch second page of playlist", batchErr);
+                }
             }
 
-            setGameState('start');
-        } else {
-            alert('Esta playlist no tiene canciones válidas o disponibles.');
+            // Deduplicate songs by both track ID and (cleanTitle + artist)
+            const seenKeys = new Set<string>();
+            const uniqueTracks: any[] = [];
+
+            for (const item of rawItems) {
+                const t = item?.track;
+                if (!t || !t.uri || !t.album?.release_date || t.is_playable === false) continue;
+
+                const key = getTrackKey(t);
+                if (seenKeys.has(key) || seenKeys.has(t.id)) {
+                    continue;
+                }
+                seenKeys.add(key);
+                seenKeys.add(t.id);
+
+                uniqueTracks.push({
+                    ...t,
+                    displayName: cleanTrackTitle(t.name)
+                });
+            }
+
+            // Fisher-Yates shuffle for thorough randomness
+            for (let i = uniqueTracks.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [uniqueTracks[i], uniqueTracks[j]] = [uniqueTracks[j], uniqueTracks[i]];
+            }
+
+            if (uniqueTracks.length >= teamCount) {
+                // Setup Initial Timelines with resolved true studio years
+                const initialCards: any[] = [];
+                const playedKeys = new Set<string>();
+
+                for (let i = 0; i < teamCount; i++) {
+                    const card = uniqueTracks[i];
+                    const origYear = await resolveOriginalReleaseYear(card, token!);
+                    const readyCard = {
+                        ...card,
+                        displayName: cleanTrackTitle(card.name),
+                        album: {
+                            ...card.album,
+                            release_date: `${origYear}-01-01`
+                        }
+                    };
+                    initialCards.push(readyCard);
+                    playedKeys.add(getTrackKey(readyCard));
+                    playedKeys.add(readyCard.id);
+                }
+
+                const newTeams = { ...teams };
+                Object.keys(newTeams).forEach((teamId, index) => {
+                    newTeams[teamId as Team].timeline = [initialCards[index]];
+                    newTeams[teamId as Team].score = 0;
+                });
+
+                setTeams(newTeams);
+                setPlayedTrackKeys(playedKeys);
+                setTracks(uniqueTracks.slice(teamCount));
+                setGameState('start');
+            } else {
+                alert('Esta playlist no tiene suficientes canciones válidas o disponibles.');
+                setSelectedPlaylist(null);
+            }
+        } catch (err) {
+            console.error("Error loading playlist tracks:", err);
+            alert('Error al cargar las canciones de la playlist.');
             setSelectedPlaylist(null);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const startGame = () => {
@@ -1042,7 +1165,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                                         />
                                         <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
                                     </div>
-                                    <h3 className="text-lg font-black text-white leading-tight px-4 truncate max-w-xs">{currentTrack?.name}</h3>
+                                    <h3 className="text-lg font-black text-white leading-tight px-4 truncate max-w-xs">{currentTrack?.displayName || cleanTrackTitle(currentTrack?.name)}</h3>
                                     <p className="text-emerald-400 text-xs font-bold mb-3">{currentTrack?.artists?.[0]?.name}</p>
                                 </div>
                             )}
@@ -1156,7 +1279,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <h2 className="text-xl font-black text-white leading-tight mb-1">{previewTrack.name}</h2>
+                    <h2 className="text-xl font-black text-white leading-tight mb-1">{previewTrack.displayName || cleanTrackTitle(previewTrack.name)}</h2>
                     <p className="text-sm text-emerald-400 font-bold mb-4">{previewTrack.artists?.[0]?.name}</p>
 
                     <div className="flex items-center gap-2 mb-6">
@@ -1452,7 +1575,7 @@ export function HitsterGame({ onExit }: { onExit: () => void }) {
                                             {/* Track Title & Artist */}
                                             <div className="min-w-0 flex-1">
                                                 <p className="font-black text-sm sm:text-base text-white truncate leading-tight group-hover:text-emerald-300 transition-colors">
-                                                    {track.name}
+                                                    {track.displayName || cleanTrackTitle(track.name)}
                                                 </p>
                                                 <p className="text-gray-400 text-xs truncate mt-1">
                                                     {track.artists?.[0]?.name}

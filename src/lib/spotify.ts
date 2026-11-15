@@ -182,8 +182,8 @@ export const spotifyFetch = async (url: string, token: string, options: RequestI
     return response;
 };
 
-export const fetchPlaylistTracks = async (token: string, playlistId: string) => {
-    const response = await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&market=from_token`, token);
+export const fetchPlaylistTracks = async (token: string, playlistId: string, limit: number = 100, offset: number = 0) => {
+    const response = await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}&market=from_token`, token);
     return await response.json();
 };
 
@@ -210,6 +210,25 @@ export const transferPlayback = async (token: string, deviceId: string, play = f
     });
 };
 
+export const setShuffle = async (token: string, state: boolean, deviceId?: string) => {
+    try {
+        const url = `https://api.spotify.com/v1/me/player/shuffle?state=${state}${deviceId ? `&device_id=${deviceId}` : ''}`;
+        return await spotifyFetch(url, token, { method: 'PUT' });
+    } catch (e) {
+        return null;
+    }
+};
+
+export const getCurrentlyPlaying = async (token: string) => {
+    try {
+        const response = await spotifyFetch('https://api.spotify.com/v1/me/player/currently-playing', token);
+        if (response.status === 204 || !response.ok) return null;
+        return await response.json();
+    } catch (e) {
+        return null;
+    }
+};
+
 export const getAvailableDevices = async (token: string) => {
     const response = await spotifyFetch('https://api.spotify.com/v1/me/player/devices', token);
     return await response.json();
@@ -220,20 +239,85 @@ export const getUserPlaylists = async (token: string) => {
     return await response.json();
 };
 
+// Strips annoying remaster/deluxe suffixes so the title is clean and matches original hits
+export const cleanTrackTitle = (title?: string): string => {
+    if (!title) return '';
+    return title
+        .replace(/\s*[-–]\s*(remaster(ed)?(\s*\d{4})?|live|en vivo|radio edit|original mix|single version|mono|stereo|album version).*/i, '')
+        .replace(/\s*\((remaster(ed)?(\s*\d{4})?|live|en vivo|radio edit|deluxe|bonus track).*\)/i, '')
+        .replace(/\s*\[(remaster(ed)?(\s*\d{4})?|live|en vivo|radio edit|deluxe|bonus track).*\]/i, '')
+        .trim();
+};
+
+// Year resolution cache to avoid duplicate API searches
+const yearCache = new Map<string, number>();
+
+// Resolves the true original studio release year for tracks, fixing compilation and re-release year mismatches
+export const resolveOriginalReleaseYear = async (track: any, token: string): Promise<number> => {
+    if (!track?.album?.release_date) return 2000;
+    const rawYear = parseInt(track.album.release_date.split('-')[0]) || 2000;
+
+    const artistName = track.artists?.[0]?.name || '';
+    const cleanName = cleanTrackTitle(track.name);
+    const cacheKey = `${cleanName}_${artistName}`.toLowerCase();
+
+    if (yearCache.has(cacheKey)) {
+        return yearCache.get(cacheKey)!;
+    }
+
+    const albumName = (track.album.name || '').toLowerCase();
+    const isCompilation = track.album.album_type === 'compilation' ||
+        /hits|éxitos|exitos|best of|essential|antolog|soundtrack|collection|colección|anniversary|remaster/i.test(albumName) ||
+        /remaster/i.test(track.name || '');
+
+    // If it's already an original studio album (not a compilation/remaster), the date is accurate
+    if (!isCompilation) {
+        yearCache.set(cacheKey, rawYear);
+        return rawYear;
+    }
+
+    // It's a compilation or remaster: search Spotify for the earliest studio version
+    try {
+        const query = `track:${cleanName} artist:${artistName}`;
+        const searchRes = await spotifyFetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10&market=from_token`, token);
+        const searchData = await searchRes.json();
+        const candidateTracks: any[] = searchData?.tracks?.items || [];
+
+        let earliestYear = rawYear;
+
+        for (const candidate of candidateTracks) {
+            if (!candidate?.album?.release_date) continue;
+            const candArtist = (candidate.artists?.[0]?.name || '').toLowerCase();
+            const candName = cleanTrackTitle(candidate.name).toLowerCase();
+
+            // Match artist and song name
+            if (candArtist.includes(artistName.toLowerCase()) || artistName.toLowerCase().includes(candArtist)) {
+                if (candName.includes(cleanName.toLowerCase()) || cleanName.toLowerCase().includes(candName)) {
+                    const candYear = parseInt(candidate.album.release_date.split('-')[0]);
+                    if (candYear && candYear >= 1940 && candYear < earliestYear) {
+                        earliestYear = candYear;
+                    }
+                }
+            }
+        }
+
+        yearCache.set(cacheKey, earliestYear);
+        return earliestYear;
+    } catch (e) {
+        yearCache.set(cacheKey, rawYear);
+        return rawYear;
+    }
+};
+
 export const playTrack = async (
     token: string,
     trackUri: string,
-    deviceId?: string,
-    contextUri?: string
+    deviceId?: string
 ) => {
     const url = `https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${deviceId}` : ''}`;
 
-    // Prefer context + offset for playlists (Spotify native apps handle this with 100% reliability)
-    const body: any = contextUri ? {
-        context_uri: contextUri,
-        offset: { uri: trackUri },
-        position_ms: 0
-    } : {
+    // ALWAYS use direct uris array so Spotify plays ONLY this exact track without shuffling the playlist
+    const body = {
         uris: [trackUri],
         position_ms: 0
     };
@@ -245,20 +329,6 @@ export const playTrack = async (
         },
         body: JSON.stringify(body)
     });
-
-    // If context_uri fails, fallback to direct uris array
-    if (!response.ok && contextUri) {
-        response = await spotifyFetch(url, token, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                uris: [trackUri],
-                position_ms: 0
-            })
-        });
-    }
 
     return response;
 };
